@@ -1,5 +1,6 @@
 import os
 import ssl
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import NullPool
@@ -18,6 +19,13 @@ elif DATABASE_URL.startswith("postgresql://") and "+pg8000" not in DATABASE_URL:
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
+    # Strip sslmode from URL (pg8000 uses ssl_context instead)
+    parsed = urlparse(DATABASE_URL)
+    qs = parse_qs(parsed.query)
+    qs.pop("sslmode", None)
+    clean_query = urlencode(qs, doseq=True)
+    DATABASE_URL = urlunparse(parsed._replace(query=clean_query))
+
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE

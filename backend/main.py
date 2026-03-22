@@ -10,7 +10,11 @@ from routes import appointments, admin, settings, slots
 
 app = FastAPI(title="Niger Foundation Hospital PS-Consultation API", version="1.0.0")
 
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+else:
+    allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
