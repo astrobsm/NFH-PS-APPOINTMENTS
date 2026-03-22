@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 
@@ -8,6 +8,16 @@ export default function BookAppointment() {
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [error, setError] = useState('')
   const [slots, setSlots] = useState([])
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [scrolledToEnd, setScrolledToEnd] = useState(false)
+  const termsRef = useRef(null)
+
+  const handleTermsScroll = () => {
+    const el = termsRef.current
+    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+      setScrolledToEnd(true)
+    }
+  }
 
   const [form, setForm] = useState({
     appointment_date: '',
@@ -49,6 +59,10 @@ export default function BookAppointment() {
 
     if (!form.start_time) {
       setError('Please select a time slot')
+      return
+    }
+    if (!acceptedTerms) {
+      setError('Please read and accept the Terms and Conditions')
       return
     }
 
@@ -223,8 +237,103 @@ export default function BookAppointment() {
           </div>
         )}
 
+        {/* Step 4: Terms and Conditions */}
+        {form.start_time && form.full_name && form.age && form.gender && form.visit_category && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="font-semibold text-gray-800 mb-4">4. Terms &amp; Conditions</h2>
+            <p className="text-sm text-gray-500 mb-3">Please read the terms below. You must scroll to the end to accept.</p>
+            <div
+              ref={termsRef}
+              onScroll={handleTermsScroll}
+              className="h-64 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 text-sm text-gray-700 leading-relaxed"
+            >
+              <h3 className="text-center font-bold text-blue-800 mb-1">NIGER FOUNDATION HOSPITAL, ENUGU</h3>
+              <h4 className="text-center font-semibold text-blue-700 mb-1">PLASTIC SURGERY / WOUND CARE CLINIC</h4>
+              <h4 className="text-center font-semibold text-gray-800 mb-4">PATIENT APPOINTMENT TERMS AND CONDITIONS</h4>
+
+              <p className="font-semibold mt-3 mb-1">1. Appointment Scheduling</p>
+              <p>By booking an appointment through the PS-Consultation platform, the patient acknowledges and agrees to adhere strictly to the scheduled date and time selected.</p>
+
+              <p className="font-semibold mt-3 mb-1">2. Punctuality Requirement</p>
+              <p>Patients are required to arrive at the clinic not later than five (5) minutes before or five (5) minutes after their scheduled appointment time.</p>
+              <p className="mt-1">Failure to comply with this time window shall be deemed as non-attendance or lateness beyond acceptable limits, and the appointment shall be considered forfeited.</p>
+
+              <p className="font-semibold mt-3 mb-1">3. Missed or Late Appointments</p>
+              <p>In the event that a patient:</p>
+              <ul className="list-disc ml-5 mt-1">
+                <li>Arrives later than five (5) minutes after the scheduled appointment time, or</li>
+                <li>Fails to attend the appointment entirely,</li>
+              </ul>
+              <p className="mt-1">the patient shall:</p>
+              <ul className="list-disc ml-5 mt-1">
+                <li>Forfeit the scheduled time slot, and</li>
+                <li>Either:
+                  <ul className="list-disc ml-5 mt-1">
+                    <li>Reschedule for another available date and time, or</li>
+                    <li>Wait to be attended to only after all patients with valid scheduled appointments for that session have been fully attended to, subject to availability of clinic time.</li>
+                  </ul>
+                </li>
+              </ul>
+              <p className="mt-1">The clinic reserves the absolute right to determine whether such a patient can still be accommodated on the same day.</p>
+
+              <p className="font-semibold mt-3 mb-1">4. No Guarantee of Immediate Consultation After Default</p>
+              <p>Patients who miss their appointment time shall not be entitled to immediate consultation upon arrival and may experience significant delays or be required to return on another date.</p>
+
+              <p className="font-semibold mt-3 mb-1">5. Respect for Clinical Order and Other Patients</p>
+              <p>All appointments are structured to ensure:</p>
+              <ul className="list-disc ml-5 mt-1">
+                <li>Efficient patient flow</li>
+                <li>Fairness to all patients</li>
+                <li>Optimal clinical care delivery</li>
+              </ul>
+              <p className="mt-1">Patients agree to respect the appointment system and acknowledge that priority shall always be given to those who arrive within their designated time window.</p>
+
+              <p className="font-semibold mt-3 mb-1">6. Clinic Authority</p>
+              <p>The clinic management and attending medical team reserve the right to:</p>
+              <ul className="list-disc ml-5 mt-1">
+                <li>Enforce these terms without exception</li>
+                <li>Modify schedules where necessary for clinical or operational reasons</li>
+                <li>Decline consultation where non-compliance disrupts clinic workflow</li>
+              </ul>
+
+              <p className="font-semibold mt-3 mb-1">7. Acceptance of Terms</p>
+              <p>By proceeding to book an appointment, the patient confirms that they have:</p>
+              <ul className="list-disc ml-5 mt-1">
+                <li>Read and understood these terms</li>
+                <li>Agreed to comply fully with all stated conditions</li>
+              </ul>
+
+              <div className="mt-4 pt-3 border-t border-gray-300 text-center">
+                <p className="font-semibold text-blue-800">Niger Foundation Hospital, Enugu</p>
+                <p className="font-medium text-blue-700">Plastic Surgery / Wound Care Clinic</p>
+                <p className="italic text-gray-600 mt-1">Committed to Excellence, Discipline, and Quality Patient Care</p>
+              </div>
+            </div>
+
+            {!scrolledToEnd && (
+              <p className="text-amber-600 text-sm mt-2 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                Please scroll to the end of the terms to enable acceptance
+              </p>
+            )}
+
+            <label className={`flex items-center gap-2 mt-3 cursor-pointer ${!scrolledToEnd ? 'opacity-50 pointer-events-none' : ''}`}>
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                disabled={!scrolledToEnd}
+                className="w-4 h-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                I have read and agree to the Terms and Conditions
+              </span>
+            </label>
+          </div>
+        )}
+
         {/* Submit */}
-        {form.start_time && (
+        {form.start_time && acceptedTerms && (
           <button
             type="submit"
             disabled={loading}
