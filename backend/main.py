@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -24,10 +28,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create tables on startup
-@app.on_event("startup")
-def startup():
+# Create tables at module level (Vercel doesn't fire ASGI startup events)
+try:
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Failed to create tables: {e}")
 
 # Include routers
 app.include_router(slots.router)
@@ -38,4 +44,23 @@ app.include_router(settings.router)
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "app": "NFH PS-Consultation"}
+    """Health check with DB connectivity test."""
+    db_status = "unknown"
+    db_error = None
+    try:
+        from database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        db_status = "connected"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+    return {
+        "status": "ok",
+        "app": "NFH PS-Consultation",
+        "database": db_status,
+        "db_error": db_error,
+        "db_url_prefix": os.getenv("DATABASE_URL", "NOT SET")[:30] + "...",
+    }
