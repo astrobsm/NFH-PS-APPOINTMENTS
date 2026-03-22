@@ -1,1 +1,11 @@
 fastapi
+uvicorn
+sqlalchemy
+python-jose[cryptography]
+python-dotenv
+reportlab
+pydantic
+python-multipart
+bcrypt
+pg8000
+pillow
