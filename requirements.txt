@@ -7,5 +7,5 @@ reportlab
 pydantic
 python-multipart
 bcrypt
-psycopg[binary]
+pg8000
 pillow
