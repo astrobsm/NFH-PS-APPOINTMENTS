@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #111827;
+  background-color: #f9fafb;
+}
+
+/* Ensure form elements inherit proper text color */
+input,
+select,
+textarea,
+button {
+  color: inherit;
+  font-family: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* Fix date/time input text visibility */
+input[type="date"],
+input[type="time"],
+input[type="number"] {
+  color: #111827;
+}
+
+select option {
+  color: #111827;
+  background-color: #ffffff;
+}
+
+/* Watermark overlay */
+.watermark-bg {
+  position: relative;
+}
+.watermark-bg::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);
+  background-image: url('/NFH-LOGO.webp');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media print {
+  .watermark-bg::before {
+    position: fixed;
+    opacity: 0.08;
+  }
+}
