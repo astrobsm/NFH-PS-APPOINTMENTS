@@ -1,15 +1,10 @@
-from fastapi import FastAPI
+from http.server import BaseHTTPRequestHandler
+import json
 import sys
-import os
 
-app = FastAPI()
-
-@app.get("/api/health")
-async def health():
-    return {
-        "status": "ok",
-        "python": sys.version,
-        "env_keys": [k for k in os.environ if k in ("DATABASE_URL", "SECRET_KEY", "VERCEL")]
-    }
-
-handler = app
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"status": "ok", "python": sys.version}).encode())
