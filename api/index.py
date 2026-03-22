@@ -1,17 +1,11 @@
-"""Minimal diagnostic - absolutely no external imports"""
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from http.server import BaseHTTPRequestHandler
+import json
 import sys
-import os
 
-app = FastAPI()
-
-@app.get("/api/health")
-async def health():
-    return {"status": "minimal_test_ok", "python": sys.version}
-
-@app.get("/api/test")
-async def test():
-    return {"message": "API is working", "env_vars": [k for k in os.environ if k in ("DATABASE_URL", "SECRET_KEY", "VERCEL")]}
-
-handler = app
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        data = {"status": "ok", "python": sys.version, "path": self.path}
+        self.wfile.write(json.dumps(data).encode())
