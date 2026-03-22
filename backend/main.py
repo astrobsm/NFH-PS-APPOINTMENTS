@@ -28,12 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create tables at module level (Vercel doesn't fire ASGI startup events)
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.error(f"Failed to create tables: {e}")
+@app.on_event("startup")
+def startup():
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create tables: {e}")
 
 # Include routers
 app.include_router(slots.router)
