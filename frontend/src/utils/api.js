@@ -29,6 +29,10 @@ export const api = {
   bookAppointment: (data) =>
     request('/appointments', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Surgery endpoints
+  bookSurgery: (data) =>
+    request('/surgeries', { method: 'POST', body: JSON.stringify(data) }),
+
   // Admin auth
   adminLogin: (password) =>
     request('/admin/login', { method: 'POST', body: JSON.stringify({ password }) }),
@@ -39,6 +43,16 @@ export const api = {
 
   deleteAppointment: (id) =>
     request(`/admin/appointments/${id}`, { method: 'DELETE' }),
+
+  // Admin surgery endpoints
+  getSurgeries: (status) =>
+    request(`/admin/surgeries${status ? `?status=${status}` : ''}`),
+
+  updateSurgery: (id, data) =>
+    request(`/admin/surgeries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteSurgery: (id) =>
+    request(`/admin/surgeries/${id}`, { method: 'DELETE' }),
 
   exportPdf: async (date) => {
     const result = await request('/admin/schedule-print?date=' + date, { method: 'POST' })

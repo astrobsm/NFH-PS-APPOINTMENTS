@@ -26,6 +26,7 @@ export default function BookAppointment() {
     full_name: '',
     age: '',
     gender: '',
+    phone_number: '',
     visit_category: '',
     reason: '',
   })
@@ -205,6 +206,18 @@ export default function BookAppointment() {
                     <option value="Female">Female</option>
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (WhatsApp)</label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={form.phone_number}
+                  onChange={handleChange}
+                  maxLength={20}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="e.g. +2348012345678"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visit Category</label>

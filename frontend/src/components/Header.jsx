@@ -17,7 +17,8 @@ export default function Header() {
         <nav className="flex items-center gap-4 text-sm">
           {isAdmin ? (
             <>
-              <Link to="/admin/dashboard" className="hover:text-blue-200 transition">Dashboard</Link>
+              <Link to="/admin/dashboard" className="hover:text-blue-200 transition">Appointments</Link>
+              <Link to="/admin/surgeries" className="hover:text-blue-200 transition">Surgeries</Link>
               <Link to="/admin/settings" className="hover:text-blue-200 transition">Settings</Link>
               <button
                 onClick={() => { localStorage.removeItem('admin_token'); window.location.href = '/' }}
@@ -30,6 +31,7 @@ export default function Header() {
             <>
               <Link to="/" className="hover:text-blue-200 transition">Home</Link>
               <Link to="/book" className="hover:text-blue-200 transition">Book Visit</Link>
+              <Link to="/book-surgery" className="hover:text-blue-200 transition">Book Surgery</Link>
               <Link to="/admin" className="text-blue-300 hover:text-white transition text-xs opacity-75">Admin</Link>
             </>
           )}

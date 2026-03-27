@@ -136,7 +136,7 @@ app.get('/api/slots', async (req, res) => {
 // ── POST /api/appointments ──
 app.post('/api/appointments', async (req, res) => {
   try {
-    const { full_name, age, gender, visit_type, visit_category, reason, appointment_date, start_time } = req.body;
+    const { full_name, age, gender, phone_number, visit_type, visit_category, reason, appointment_date, start_time } = req.body;
 
     if (!full_name || age === undefined || !gender || !visit_type || !visit_category || !appointment_date || !start_time) {
       return res.status(400).json({ detail: 'Missing required fields' });
@@ -195,10 +195,10 @@ app.post('/api/appointments', async (req, res) => {
     }
 
     const insertResult = await query(
-      `INSERT INTO appointments (full_name, age, gender, visit_type, visit_category, reason, appointment_date, start_time, end_time)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO appointments (full_name, age, gender, phone_number, visit_type, visit_category, reason, appointment_date, start_time, end_time)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [full_name, parseInt(age), gender, visit_type, visit_category, reason || null, appointment_date, startTimeStr, endTimeStr]
+      [full_name, parseInt(age), gender, phone_number || null, visit_type, visit_category, reason || null, appointment_date, startTimeStr, endTimeStr]
     );
 
     const row = insertResult.rows[0];
@@ -207,6 +207,7 @@ app.post('/api/appointments', async (req, res) => {
       full_name: row.full_name,
       age: row.age,
       gender: row.gender,
+      phone_number: row.phone_number,
       visit_type: row.visit_type,
       visit_category: row.visit_category,
       reason: row.reason,
@@ -356,6 +357,7 @@ app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
       full_name: row.full_name,
       age: row.age,
       gender: row.gender,
+      phone_number: row.phone_number,
       visit_type: row.visit_type,
       visit_category: row.visit_category,
       reason: row.reason,
@@ -414,6 +416,129 @@ app.post('/api/admin/schedule-print', requireAdmin, async (req, res) => {
     });
   } catch (e) {
     console.error('schedule-print error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── POST /api/surgeries ── (public: patient books a surgery)
+app.post('/api/surgeries', async (req, res) => {
+  try {
+    const { full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes } = req.body;
+
+    if (!full_name || age === undefined || !gender || !surgery_type || !preferred_date) {
+      return res.status(400).json({ detail: 'Missing required fields' });
+    }
+
+    // Validate not in the past
+    const d = new Date(preferred_date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (d < today) {
+      return res.status(400).json({ detail: 'Cannot schedule surgery in the past' });
+    }
+
+    const insertResult = await query(
+      `INSERT INTO surgeries (full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+       RETURNING *`,
+      [full_name, parseInt(age), gender, phone_number || null, surgery_type, diagnosis || null, preferred_date, notes || null]
+    );
+
+    const row = insertResult.rows[0];
+    res.json({
+      id: row.id,
+      full_name: row.full_name,
+      age: row.age,
+      gender: row.gender,
+      phone_number: row.phone_number,
+      surgery_type: row.surgery_type,
+      diagnosis: row.diagnosis,
+      preferred_date: formatDateISO(row.preferred_date),
+      notes: row.notes,
+      status: row.status,
+    });
+  } catch (e) {
+    console.error('surgery booking error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── GET /api/admin/surgeries (auth required) ──
+app.get('/api/admin/surgeries', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let result;
+    if (status) {
+      result = await query(
+        'SELECT * FROM surgeries WHERE status = $1 ORDER BY preferred_date, created_at',
+        [status]
+      );
+    } else {
+      result = await query('SELECT * FROM surgeries ORDER BY preferred_date, created_at');
+    }
+
+    const surgeries = result.rows.map(row => ({
+      id: row.id,
+      full_name: row.full_name,
+      age: row.age,
+      gender: row.gender,
+      phone_number: row.phone_number,
+      surgery_type: row.surgery_type,
+      diagnosis: row.diagnosis,
+      preferred_date: formatDateISO(row.preferred_date),
+      surgeon_name: row.surgeon_name,
+      notes: row.notes,
+      status: row.status,
+      created_at: row.created_at,
+    }));
+
+    res.json(surgeries);
+  } catch (e) {
+    console.error('get surgeries error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── PUT /api/admin/surgeries/:id (auth required) ──
+app.put('/api/admin/surgeries/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, surgeon_name, preferred_date, notes } = req.body;
+
+    const existing = await query('SELECT * FROM surgeries WHERE id = $1', [parseInt(id)]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ detail: 'Surgery booking not found' });
+    }
+    const current = existing.rows[0];
+
+    const updatedStatus = status || current.status;
+    const updatedSurgeon = surgeon_name !== undefined ? surgeon_name : current.surgeon_name;
+    const updatedDate = preferred_date || formatDateISO(current.preferred_date);
+    const updatedNotes = notes !== undefined ? notes : current.notes;
+
+    await query(
+      `UPDATE surgeries SET status = $1, surgeon_name = $2, preferred_date = $3, notes = $4 WHERE id = $5`,
+      [updatedStatus, updatedSurgeon, updatedDate, updatedNotes, parseInt(id)]
+    );
+
+    res.json({ message: 'Surgery booking updated' });
+  } catch (e) {
+    console.error('update surgery error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── DELETE /api/admin/surgeries/:id (auth required) ──
+app.delete('/api/admin/surgeries/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query('DELETE FROM surgeries WHERE id = $1 RETURNING id', [parseInt(id)]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ detail: 'Surgery booking not found' });
+    }
+    res.json({ message: 'Surgery booking deleted' });
+  } catch (e) {
+    console.error('delete surgery error:', e);
     res.status(500).json({ detail: e.message });
   }
 });

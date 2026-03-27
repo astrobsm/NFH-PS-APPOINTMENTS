@@ -42,12 +42,38 @@ async function initTables() {
       full_name VARCHAR(100) NOT NULL,
       age INTEGER NOT NULL,
       gender VARCHAR(10) NOT NULL,
+      phone_number VARCHAR(20),
       visit_type VARCHAR(20) NOT NULL,
       visit_category VARCHAR(20) NOT NULL,
       reason TEXT,
       appointment_date DATE NOT NULL,
       start_time TIME NOT NULL,
       end_time TIME NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  // Add phone_number column if it doesn't exist (for existing deployments)
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE appointments ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20);
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS surgeries (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(100) NOT NULL,
+      age INTEGER NOT NULL,
+      gender VARCHAR(10) NOT NULL,
+      phone_number VARCHAR(20),
+      surgery_type VARCHAR(100) NOT NULL,
+      diagnosis TEXT,
+      preferred_date DATE NOT NULL,
+      surgeon_name VARCHAR(100),
+      notes TEXT,
+      status VARCHAR(20) DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
