@@ -31,7 +31,6 @@ export default function Header() {
             <>
               <Link to="/" className="hover:text-blue-200 transition">Home</Link>
               <Link to="/book" className="hover:text-blue-200 transition">Book Visit</Link>
-              <Link to="/book-surgery" className="hover:text-blue-200 transition">Book Surgery</Link>
               <Link to="/admin" className="text-blue-300 hover:text-white transition text-xs opacity-75">Admin</Link>
             </>
           )}

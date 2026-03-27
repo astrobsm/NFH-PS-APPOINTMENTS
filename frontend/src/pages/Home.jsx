@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 
 export default function Home() {
+  const isAdmin = !!localStorage.getItem('admin_token')
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-12 relative z-10">
       <div className="text-center mb-12">
@@ -33,8 +35,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Surgery Booking Section */}
-      <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-4 border-purple-600">
+      {/* Surgery Booking Section - Admin Only */}
+      {isAdmin && <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-4 border-purple-600">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +56,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div className="bg-white rounded-xl shadow-md p-8 mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Clinic Hours</h2>
@@ -81,12 +83,14 @@ export default function Home() {
         >
           Book an Appointment
         </Link>
-        <Link
-          to="/book-surgery"
-          className="inline-block bg-purple-700 hover:bg-purple-800 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
-        >
-          Book a Surgery
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/book-surgery"
+            className="inline-block bg-purple-700 hover:bg-purple-800 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+          >
+            Book a Surgery
+          </Link>
+        )}
       </div>
     </main>
   )
