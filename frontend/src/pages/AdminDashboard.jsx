@@ -81,7 +81,7 @@ export default function AdminDashboard() {
     const phone = apt.phone_number.replace(/[^0-9]/g, '')
     const date = apt.appointment_date
     const time = apt.start_time?.slice(0, 5)
-    const message = `Dear ${apt.full_name},\n\nThis is a reminder from *Niger Foundation Hospital, Enugu* – Plastic Surgery/Wound Care Clinic.\n\nYour appointment details:\n📅 Date: ${date}\n⏰ Time: ${time}\n🏥 Visit Type: ${visitTypeLabel(apt.visit_type)}\n\nPlease arrive 5 minutes before your scheduled time.\n\nThank you.`
+    const message = `Dear ${apt.full_name},\n\nThis is a reminder from *Niger Foundation Hospital, Enugu* – Plastic Surgery/Wound Care Clinic.\n\nYour appointment details:\n📅 Date: ${date}\n⏰ Time: ${time}\n🏥 Visit Type: ${visitTypeLabel(apt.visit_type)}\n\n⚠️ *IMPORTANT:* Please arrive at least *ONE (1) HOUR* before your scheduled appointment time to enable you to:\n• Get your vital signs taken\n• Pay consultation fees\n• Confirm the availability of wound care materials (for those who need wound care service)\n\nThank you.`
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }
 

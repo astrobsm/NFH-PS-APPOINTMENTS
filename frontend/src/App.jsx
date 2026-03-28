@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
+import OfflineIndicator from './components/OfflineIndicator'
 import Home from './pages/Home'
 import BookAppointment from './pages/BookAppointment'
 import Confirmation from './pages/Confirmation'
@@ -14,6 +15,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 watermark-bg">
       <Header />
+      <OfflineIndicator />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/book" element={<BookAppointment />} />

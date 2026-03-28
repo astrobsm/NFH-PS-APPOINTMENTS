@@ -92,9 +92,9 @@ export default function SurgeryDashboard() {
     const phone = surg.phone_number.replace(/[^0-9]/g, '')
     let message = ''
     if (messageType === 'confirm') {
-      message = `Dear ${surg.full_name},\n\nThis is from *Niger Foundation Hospital, Enugu* – Plastic Surgery Unit.\n\nYour surgery booking has been *CONFIRMED*.\n\n🏥 Surgery: ${surg.surgery_type}\n📅 Date: ${surg.preferred_date}${surg.surgeon_name ? `\n👨‍⚕️ Surgeon: ${surg.surgeon_name}` : ''}\n\nPlease ensure all pre-operative requirements are completed before the surgery date.\n\nThank you.`
+      message = `Dear ${surg.full_name},\n\nThis is from *Niger Foundation Hospital, Enugu* – Plastic Surgery Unit.\n\nYour surgery booking has been *CONFIRMED*.\n\n🏥 Surgery: ${surg.surgery_type}\n📅 Date: ${surg.preferred_date}${surg.surgeon_name ? `\n👨‍⚕️ Surgeon: ${surg.surgeon_name}` : ''}\n\n⚠️ *IMPORTANT:* Please arrive at least *ONE (1) HOUR* before your scheduled appointment time to enable you to:\n• Get your vital signs taken\n• Pay consultation fees\n• Confirm the availability of wound care materials (for those who need wound care service)\n\nPlease ensure all pre-operative requirements are completed before the surgery date.\n\nThank you.`
     } else {
-      message = `Dear ${surg.full_name},\n\nThis is a reminder from *Niger Foundation Hospital, Enugu* – Plastic Surgery Unit.\n\nYour upcoming surgery details:\n🏥 Surgery: ${surg.surgery_type}\n📅 Date: ${surg.preferred_date}${surg.surgeon_name ? `\n👨‍⚕️ Surgeon: ${surg.surgeon_name}` : ''}\n\nPlease ensure all pre-operative requirements are completed.\n\nThank you.`
+      message = `Dear ${surg.full_name},\n\nThis is a reminder from *Niger Foundation Hospital, Enugu* – Plastic Surgery Unit.\n\nYour upcoming surgery details:\n🏥 Surgery: ${surg.surgery_type}\n📅 Date: ${surg.preferred_date}${surg.surgeon_name ? `\n👨‍⚕️ Surgeon: ${surg.surgeon_name}` : ''}\n\n⚠️ *IMPORTANT:* Please arrive at least *ONE (1) HOUR* before your scheduled appointment time to enable you to:\n• Get your vital signs taken\n• Pay consultation fees\n• Confirm the availability of wound care materials (for those who need wound care service)\n\nPlease ensure all pre-operative requirements are completed.\n\nThank you.`
     }
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }

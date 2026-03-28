@@ -1,17 +1,26 @@
 {
   "name": "NFH Enugu - PS-Consultation",
   "short_name": "PS-Consult",
-  "description": "Book your clinic consultation appointment",
+  "description": "Niger Foundation Hospital, Enugu - Plastic Surgery/Wound Care Consultation Appointment Scheduling",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "categories": ["medical", "health"],
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "/NFH-LOGO.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
     }
   ]
 }

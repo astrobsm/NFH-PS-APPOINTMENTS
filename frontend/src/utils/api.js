@@ -1,3 +1,5 @@
+import { addToQueue, requestBackgroundSync } from './offlineQueue'
+
 const API_BASE = '/api'
 
 async function request(url, options = {}) {
@@ -21,17 +23,58 @@ async function request(url, options = {}) {
   return res.json()
 }
 
+// Wrapper that queues POST requests when offline
+async function requestWithOfflineQueue(url, options = {}, offlineMeta = {}) {
+  if (navigator.onLine) {
+    return request(url, options)
+  }
+
+  // Queue for later sync
+  const token = localStorage.getItem('admin_token')
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  await addToQueue({
+    url: `${API_BASE}${url}`,
+    headers,
+    body: options.body,
+    type: offlineMeta.type || 'unknown',
+    timestamp: Date.now(),
+  })
+
+  requestBackgroundSync()
+
+  // Return a synthetic response so the UI can show confirmation
+  const parsed = JSON.parse(options.body)
+  return {
+    ...parsed,
+    id: `OFFLINE-${Date.now()}`,
+    _offline: true,
+    status: offlineMeta.type === 'surgery' ? 'pending' : undefined,
+  }
+}
+
 export const api = {
   // Patient endpoints
   getSlots: (date, visitType) =>
     request(`/slots?date=${date}&visit_type=${visitType}`),
 
   bookAppointment: (data) =>
-    request('/appointments', { method: 'POST', body: JSON.stringify(data) }),
+    requestWithOfflineQueue(
+      '/appointments',
+      { method: 'POST', body: JSON.stringify(data) },
+      { type: 'appointment' }
+    ),
 
   // Surgery endpoints
   bookSurgery: (data) =>
-    request('/surgeries', { method: 'POST', body: JSON.stringify(data) }),
+    requestWithOfflineQueue(
+      '/surgeries',
+      { method: 'POST', body: JSON.stringify(data) },
+      { type: 'surgery' }
+    ),
 
   // Admin auth
   adminLogin: (password) =>

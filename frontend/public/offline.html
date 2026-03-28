@@ -14,18 +14,25 @@
       margin: 0;
       background: #f0f4ff;
     }
-    .container { text-align: center; padding: 2rem; }
+    .container { text-align: center; padding: 2rem; max-width: 420px; }
     h1 { color: #1e40af; font-size: 1.8rem; }
     p { color: #64748b; line-height: 1.6; }
     .icon { font-size: 3rem; margin-bottom: 1rem; }
+    .btn { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #1e40af; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; }
+    .btn:hover { background: #1e3a8a; }
+    .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; }
+    .info p { color: #1e40af; font-size: 0.875rem; margin: 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="icon">&#128225;</div>
     <h1>You're Offline</h1>
-    <p>Please check your internet connection and try again.</p>
-    <p>NFH PS-Consultation requires an internet connection to book appointments.</p>
+    <p>Don't worry — the app works offline too! Once you've visited before, you can still browse and book appointments. Your bookings will be saved and automatically synced when you reconnect.</p>
+    <div class="info">
+      <p>Try refreshing the page — cached content may be available.</p>
+    </div>
+    <a href="/" class="btn" onclick="window.location.reload(); return false;">Retry</a>
   </div>
 </body>
 </html>
