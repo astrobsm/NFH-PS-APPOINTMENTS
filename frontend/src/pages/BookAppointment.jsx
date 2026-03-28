@@ -69,10 +69,14 @@ export default function BookAppointment() {
 
     setLoading(true)
     try {
+      const phone = form.phone_number
+        ? '+234' + form.phone_number.replace(/^0+/, '')
+        : ''
       const data = {
         ...form,
         age: parseInt(form.age),
         start_time: form.start_time + ':00',
+        phone_number: phone,
       }
       const result = await api.bookAppointment(data)
       navigate('/confirmation', { state: { appointment: result } })
@@ -209,15 +213,24 @@ export default function BookAppointment() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (WhatsApp)</label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={form.phone_number}
-                  onChange={handleChange}
-                  maxLength={20}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  placeholder="e.g. +2348012345678"
-                />
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-600 text-sm font-medium select-none">
+                    +234
+                  </span>
+                  <input
+                    type="tel"
+                    name="phone_number"
+                    value={form.phone_number}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '')
+                      setForm({ ...form, phone_number: val })
+                    }}
+                    maxLength={11}
+                    className="w-full border border-gray-300 rounded-r-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="e.g. 08012345678"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Enter your number without the country code</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visit Category</label>
