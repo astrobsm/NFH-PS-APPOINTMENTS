@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 
@@ -28,11 +28,74 @@ export default function BookSurgery() {
   const [scrolledToEnd, setScrolledToEnd] = useState(false)
   const termsRef = useRef(null)
 
+  // Patient search state
+  const [patientQuery, setPatientQuery] = useState('')
+  const [patientResults, setPatientResults] = useState([])
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false)
+  const [searchingPatients, setSearchingPatients] = useState(false)
+  const [isReturningPatient, setIsReturningPatient] = useState(false)
+  const patientDropdownRef = useRef(null)
+
   const handleTermsScroll = () => {
     const el = termsRef.current
     if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
       setScrolledToEnd(true)
     }
+  }
+
+  // Debounced patient search
+  useEffect(() => {
+    if (patientQuery.length < 2) {
+      setPatientResults([])
+      setShowPatientDropdown(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSearchingPatients(true)
+      try {
+        const results = await api.searchPatients(patientQuery)
+        setPatientResults(results)
+        setShowPatientDropdown(results.length > 0)
+      } catch {
+        setPatientResults([])
+      } finally {
+        setSearchingPatients(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [patientQuery])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (patientDropdownRef.current && !patientDropdownRef.current.contains(e.target)) {
+        setShowPatientDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectPatient = (patient) => {
+    const phone = patient.phone_number
+      ? patient.phone_number.replace(/^\+234/, '').replace(/^234/, '')
+      : ''
+    setForm((f) => ({
+      ...f,
+      full_name: patient.full_name,
+      age: String(patient.age),
+      gender: patient.gender,
+      phone_number: phone,
+    }))
+    setPatientQuery(patient.full_name)
+    setShowPatientDropdown(false)
+    setIsReturningPatient(true)
+  }
+
+  const clearPatientSelection = () => {
+    setPatientQuery('')
+    setIsReturningPatient(false)
+    setForm((f) => ({ ...f, full_name: '', age: '', gender: '', phone_number: '' }))
   }
 
   const [form, setForm] = useState({
@@ -98,18 +161,62 @@ export default function BookSurgery() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="font-semibold text-gray-800 mb-4">1. Patient Information</h2>
           <div className="space-y-4">
-            <div>
+            <div ref={patientDropdownRef} className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input
-                type="text"
-                name="full_name"
-                value={form.full_name}
-                onChange={handleChange}
-                required
-                maxLength={100}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Enter patient's full name"
-              />
+              {isReturningPatient ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-green-50 border border-green-300 rounded-lg px-3 py-2 text-gray-900">
+                    <span className="font-medium">{form.full_name}</span>
+                    <span className="text-xs text-green-600 ml-2">(Returning Patient)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearPatientSelection}
+                    className="px-3 py-2 text-sm text-red-600 hover:text-red-800 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={patientQuery || form.full_name}
+                    onChange={(e) => {
+                      setPatientQuery(e.target.value)
+                      setForm({ ...form, full_name: e.target.value })
+                      setError('')
+                    }}
+                    required
+                    maxLength={100}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="Start typing to search existing patients..."
+                    autoComplete="off"
+                  />
+                  {searchingPatients && (
+                    <p className="text-xs text-gray-400 mt-1">Searching patients...</p>
+                  )}
+                  {!searchingPatients && patientQuery.length >= 2 && patientResults.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">No existing patients found — booking as new patient</p>
+                  )}
+                  {showPatientDropdown && (
+                    <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {patientResults.map((p, i) => (
+                        <li
+                          key={i}
+                          onClick={() => selectPatient(p)}
+                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="font-medium text-gray-800">{p.full_name}</div>
+                          <div className="text-xs text-gray-500">
+                            {p.gender}, Age {p.age}{p.phone_number ? ` • ${p.phone_number}` : ''}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>

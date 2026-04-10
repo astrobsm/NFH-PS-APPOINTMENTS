@@ -57,6 +57,10 @@ async function requestWithOfflineQueue(url, options = {}, offlineMeta = {}) {
 }
 
 export const api = {
+  // Patient search (returning patients)
+  searchPatients: (q) =>
+    request(`/patients?q=${encodeURIComponent(q)}`),
+
   // Patient endpoints
   getSlots: (date, visitType) =>
     request(`/slots?date=${date}&visit_type=${visitType}`),

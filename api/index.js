@@ -133,6 +133,34 @@ app.get('/api/slots', async (req, res) => {
   }
 });
 
+// ── GET /api/patients?q=... ── (public: search returning patients by name)
+app.get('/api/patients', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.json([]);
+    }
+    const search = `%${q.trim()}%`;
+    // Union distinct patients from appointments and surgeries, most recent first
+    const result = await query(
+      `SELECT full_name, age, gender, phone_number, MAX(created_at) as last_visit FROM (
+         SELECT full_name, age, gender, phone_number, created_at FROM appointments
+         UNION ALL
+         SELECT full_name, age, gender, phone_number, created_at FROM surgeries
+       ) AS all_patients
+       WHERE full_name ILIKE $1
+       GROUP BY full_name, age, gender, phone_number
+       ORDER BY MAX(created_at) DESC
+       LIMIT 10`,
+      [search]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    console.error('patient search error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // ── POST /api/appointments ──
 app.post('/api/appointments', async (req, res) => {
   try {
