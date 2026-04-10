@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ps-consultation-v3';
-const STATIC_CACHE = 'ps-static-v3';
+const CACHE_NAME = 'ps-consultation-v4';
+const STATIC_CACHE = 'ps-static-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -82,10 +82,15 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         })
-        .catch(() =>
-          caches.match(event.request).then((cached) => cached || caches.match('/'))
-            .then((response) => response || caches.match('/offline.html'))
-        )
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          const root = await caches.match('/');
+          if (root) return root;
+          const offline = await caches.match('/offline.html');
+          if (offline) return offline;
+          return new Response('Offline', { status: 503, statusText: 'Service Unavailable', headers: { 'Content-Type': 'text/html' } });
+        })
     );
     return;
   }
@@ -99,7 +104,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => {
+        if (cached) return cached;
+        return new Response('', { status: 503 });
+      });
       return cached || fetchPromise;
     })
   );
