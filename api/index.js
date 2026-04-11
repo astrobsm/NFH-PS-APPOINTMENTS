@@ -571,6 +571,143 @@ app.delete('/api/admin/surgeries/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ── POST /api/ward-rounds ── (admin-only: schedule a ward round)
+app.post('/api/ward-rounds', requireAdmin, async (req, res) => {
+  try {
+    const { full_name, age, gender, phone_number, ward, bed_number, diagnosis, planned_procedures, round_date, round_time, attending_doctor, notes } = req.body;
+
+    if (!full_name || age === undefined || !gender || !ward || !planned_procedures || !round_date) {
+      return res.status(400).json({ detail: 'Missing required fields' });
+    }
+    if (!Array.isArray(planned_procedures) || planned_procedures.length === 0) {
+      return res.status(400).json({ detail: 'At least one planned procedure is required' });
+    }
+
+    const insertResult = await query(
+      `INSERT INTO ward_rounds (full_name, age, gender, phone_number, ward, bed_number, diagnosis, planned_procedures, round_date, round_time, attending_doctor, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'scheduled')
+       RETURNING *`,
+      [full_name, parseInt(age), gender, phone_number || null, ward, bed_number || null, diagnosis || null, JSON.stringify(planned_procedures), round_date, round_time || null, attending_doctor || null, notes || null]
+    );
+
+    const row = insertResult.rows[0];
+    res.json({
+      id: row.id,
+      full_name: row.full_name,
+      age: row.age,
+      gender: row.gender,
+      phone_number: row.phone_number,
+      ward: row.ward,
+      bed_number: row.bed_number,
+      diagnosis: row.diagnosis,
+      planned_procedures: row.planned_procedures,
+      round_date: formatDateISO(row.round_date),
+      round_time: row.round_time ? fmtTime(row.round_time) : null,
+      attending_doctor: row.attending_doctor,
+      notes: row.notes,
+      status: row.status,
+    });
+  } catch (e) {
+    console.error('ward round booking error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── GET /api/admin/ward-rounds (auth required) ──
+app.get('/api/admin/ward-rounds', requireAdmin, async (req, res) => {
+  try {
+    const { date, status } = req.query;
+    let result;
+    if (date && status) {
+      result = await query(
+        'SELECT * FROM ward_rounds WHERE round_date = $1 AND status = $2 ORDER BY round_date, round_time',
+        [date, status]
+      );
+    } else if (date) {
+      result = await query(
+        'SELECT * FROM ward_rounds WHERE round_date = $1 ORDER BY round_date, round_time',
+        [date]
+      );
+    } else if (status) {
+      result = await query(
+        'SELECT * FROM ward_rounds WHERE status = $1 ORDER BY round_date, round_time',
+        [status]
+      );
+    } else {
+      result = await query('SELECT * FROM ward_rounds ORDER BY round_date, round_time');
+    }
+
+    const rounds = result.rows.map(row => ({
+      id: row.id,
+      full_name: row.full_name,
+      age: row.age,
+      gender: row.gender,
+      phone_number: row.phone_number,
+      ward: row.ward,
+      bed_number: row.bed_number,
+      diagnosis: row.diagnosis,
+      planned_procedures: Array.isArray(row.planned_procedures) ? row.planned_procedures : JSON.parse(row.planned_procedures),
+      round_date: formatDateISO(row.round_date),
+      round_time: row.round_time ? fmtTime(row.round_time) : null,
+      attending_doctor: row.attending_doctor,
+      notes: row.notes,
+      status: row.status,
+      created_at: row.created_at,
+    }));
+
+    res.json(rounds);
+  } catch (e) {
+    console.error('get ward rounds error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── PUT /api/admin/ward-rounds/:id (auth required) ──
+app.put('/api/admin/ward-rounds/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, attending_doctor, round_date, round_time, planned_procedures, notes } = req.body;
+
+    const existing = await query('SELECT * FROM ward_rounds WHERE id = $1', [parseInt(id)]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ detail: 'Ward round not found' });
+    }
+    const current = existing.rows[0];
+
+    const updatedStatus = status || current.status;
+    const updatedDoctor = attending_doctor !== undefined ? attending_doctor : current.attending_doctor;
+    const updatedDate = round_date || formatDateISO(current.round_date);
+    const updatedTime = round_time !== undefined ? round_time : (current.round_time ? fmtTimeFull(current.round_time) : null);
+    const updatedProcedures = planned_procedures ? JSON.stringify(planned_procedures) : JSON.stringify(current.planned_procedures);
+    const updatedNotes = notes !== undefined ? notes : current.notes;
+
+    await query(
+      `UPDATE ward_rounds SET status = $1, attending_doctor = $2, round_date = $3, round_time = $4, planned_procedures = $5, notes = $6 WHERE id = $7`,
+      [updatedStatus, updatedDoctor, updatedDate, updatedTime, updatedProcedures, updatedNotes, parseInt(id)]
+    );
+
+    res.json({ message: 'Ward round updated' });
+  } catch (e) {
+    console.error('update ward round error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── DELETE /api/admin/ward-rounds/:id (auth required) ──
+app.delete('/api/admin/ward-rounds/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query('DELETE FROM ward_rounds WHERE id = $1 RETURNING id', [parseInt(id)]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ detail: 'Ward round not found' });
+    }
+    res.json({ message: 'Ward round deleted' });
+  } catch (e) {
+    console.error('delete ward round error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // ── Helpers ──
 function fmtTime(t) {
   if (!t) return '00:00';

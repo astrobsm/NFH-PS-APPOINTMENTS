@@ -58,6 +58,29 @@ export default function Home() {
         </div>
       </div>}
 
+      {/* Ward Round Section - Admin Only */}
+      {isAdmin && <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-4 border-orange-500">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-orange-800 mb-2">Ward Round Scheduling</h2>
+            <p className="text-gray-600 mb-4">
+              Schedule ward rounds with planned procedures including regular review, bedside debridement, NPWT, graft inspection, and more. Track and manage all ward rounds from the dashboard.
+            </p>
+            <Link
+              to="/book-ward-round"
+              className="inline-block bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition transform hover:scale-105"
+            >
+              Schedule Ward Round
+            </Link>
+          </div>
+        </div>
+      </div>}
+
       <div className="bg-white rounded-xl shadow-md p-8 mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Clinic Hours</h2>
         <div className="grid md:grid-cols-3 gap-4">
@@ -111,6 +134,14 @@ export default function Home() {
             className="inline-block bg-purple-700 hover:bg-purple-800 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
           >
             Book a Surgery
+          </Link>
+        )}
+        {isAdmin && (
+          <Link
+            to="/book-ward-round"
+            className="inline-block bg-orange-600 hover:bg-orange-700 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+          >
+            Schedule Ward Round
           </Link>
         )}
       </div>

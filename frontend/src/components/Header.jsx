@@ -19,6 +19,7 @@ export default function Header() {
             <>
               <Link to="/admin/dashboard" className="hover:text-blue-200 transition">Appointments</Link>
               <Link to="/admin/surgeries" className="hover:text-blue-200 transition">Surgeries</Link>
+              <Link to="/admin/ward-rounds" className="hover:text-blue-200 transition">Ward Rounds</Link>
               <Link to="/admin/settings" className="hover:text-blue-200 transition">Settings</Link>
               <button
                 onClick={() => { localStorage.removeItem('admin_token'); window.location.href = '/' }}

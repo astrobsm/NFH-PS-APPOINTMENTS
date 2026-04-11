@@ -77,6 +77,26 @@ async function initTables() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS ward_rounds (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(100) NOT NULL,
+      age INTEGER NOT NULL,
+      gender VARCHAR(10) NOT NULL,
+      phone_number VARCHAR(20),
+      ward VARCHAR(100) NOT NULL,
+      bed_number VARCHAR(20),
+      diagnosis TEXT,
+      planned_procedures JSONB NOT NULL,
+      round_date DATE NOT NULL,
+      round_time TIME,
+      attending_doctor VARCHAR(100),
+      notes TEXT,
+      status VARCHAR(20) DEFAULT 'scheduled',
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
 }
 
 module.exports = { pool, query, initTables };

@@ -10,6 +10,9 @@ import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminSettings from './pages/AdminSettings'
 import SurgeryDashboard from './pages/SurgeryDashboard'
+import BookWardRound from './pages/BookWardRound'
+import WardRoundConfirmation from './pages/WardRoundConfirmation'
+import WardRoundDashboard from './pages/WardRoundDashboard'
 import QRCodePage from './pages/QRCodePage'
 
 export default function App() {
@@ -27,6 +30,9 @@ export default function App() {
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/surgeries" element={<SurgeryDashboard />} />
+        <Route path="/book-ward-round" element={<BookWardRound />} />
+        <Route path="/ward-round-confirmation" element={<WardRoundConfirmation />} />
+        <Route path="/admin/ward-rounds" element={<WardRoundDashboard />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
       </Routes>
     </div>

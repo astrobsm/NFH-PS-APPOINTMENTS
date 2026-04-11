@@ -114,6 +114,24 @@ export const api = {
     }
   },
 
+  // Ward Round endpoints
+  bookWardRound: (data) =>
+    request('/ward-rounds', { method: 'POST', body: JSON.stringify(data) }),
+
+  getWardRounds: (date, status) => {
+    const params = new URLSearchParams()
+    if (date) params.set('date', date)
+    if (status) params.set('status', status)
+    const qs = params.toString()
+    return request(`/admin/ward-rounds${qs ? `?${qs}` : ''}`)
+  },
+
+  updateWardRound: (id, data) =>
+    request(`/admin/ward-rounds/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteWardRound: (id) =>
+    request(`/admin/ward-rounds/${id}`, { method: 'DELETE' }),
+
   // Settings
   getSettings: () =>
     request('/admin/settings'),
