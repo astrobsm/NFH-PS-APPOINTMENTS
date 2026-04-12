@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { query, initTables } = require('./db');
 const { hashPassword, verifyPassword, createToken, requireAdmin } = require('./auth');
-const { generateSchedulePDF, generateSurgeryBookingPDF } = require('./pdf');
+const { generateSchedulePDF, generateSurgeryBookingPDF, generateEducationPDF } = require('./pdf');
 
 const app = express();
 app.use(cors());
@@ -618,6 +618,37 @@ app.post('/api/surgery-education', async (req, res) => {
     console.error('surgery education error:', e);
     res.status(500).json({ detail: e.message });
   }
+});
+
+// ── POST /api/education-pdf ── (generate standalone education PDF)
+app.post('/api/education-pdf', async (req, res) => {
+  try {
+    const { patient_name, procedure, diagnosis, pre_op_education, post_op_education } = req.body;
+    if (!pre_op_education && !post_op_education) {
+      return res.status(400).json({ detail: 'Education content is required' });
+    }
+    const pdfBuffer = await generateEducationPDF({
+      patientName: patient_name,
+      procedure,
+      diagnosis,
+      preOpEducation: pre_op_education,
+      postOpEducation: post_op_education,
+    });
+    const pdfBase64 = pdfBuffer.toString('base64');
+    res.json({
+      filename: `patient_education_${(procedure || 'general').replace(/\s+/g, '_').toLowerCase()}.pdf`,
+      data: pdfBase64,
+    });
+  } catch (e) {
+    console.error('education pdf error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── POST /api/surgery-draft ── (save surgery booking draft to localStorage key)
+app.post('/api/surgery-draft', async (req, res) => {
+  // Draft is saved client-side in localStorage; this endpoint is a no-op placeholder
+  res.json({ message: 'Draft saved' });
 });
 
 // ── POST /api/generate-meal-plan ── (7-day SE Nigeria meal plan based on MUST score)

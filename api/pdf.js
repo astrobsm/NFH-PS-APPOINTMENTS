@@ -391,4 +391,125 @@ function formatDateISO2(d) {
   return new Date(d).toISOString().split('T')[0];
 }
 
-module.exports = { generateSchedulePDF, generateSurgeryBookingPDF };
+module.exports = { generateSchedulePDF, generateSurgeryBookingPDF, generateEducationPDF };
+
+// ── Standalone Patient Education PDF (A4, shareable) ──
+async function generateEducationPDF({ patientName, procedure, diagnosis, preOpEducation, postOpEducation }) {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
+
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 50;
+  const contentWidth = pageWidth - 2 * margin;
+
+  let page = doc.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - 50;
+
+  const blue = rgb(0.118, 0.251, 0.686);
+  const darkGray = rgb(0.2, 0.2, 0.2);
+  const gray = rgb(0.4, 0.4, 0.4);
+
+  function checkNewPage(needed) {
+    if (y - needed < 60) {
+      page = doc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - 50;
+    }
+  }
+
+  function drawWrapped(text, indent, fontSize, usedFont, color) {
+    if (!text) return;
+    const sz = fontSize || 9;
+    const f = usedFont || font;
+    const c = color || darkGray;
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const wrapped = wrapText(line, f, sz, contentWidth - (indent || 10));
+      for (const wl of wrapped) {
+        checkNewPage(sz + 4);
+        page.drawText(wl, { x: margin + (indent || 5), y, size: sz, font: f, color: c });
+        y -= sz + 3;
+      }
+    }
+  }
+
+  // ── Hospital Branding Header ──
+  const hospitalName = 'NIGER FOUNDATION HOSPITAL, ENUGU';
+  const hnW = fontBold.widthOfTextAtSize(hospitalName, 16);
+  page.drawText(hospitalName, { x: (pageWidth - hnW) / 2, y, size: 16, font: fontBold, color: blue });
+  y -= 20;
+
+  const unitLine = 'PLASTIC SURGERY UNIT';
+  const ulW = fontBold.widthOfTextAtSize(unitLine, 11);
+  page.drawText(unitLine, { x: (pageWidth - ulW) / 2, y, size: 11, font: fontBold, color: blue });
+  y -= 18;
+
+  // Decorative line
+  page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 2, color: blue });
+  y -= 12;
+
+  // Title
+  const title = 'PATIENT EDUCATION MATERIAL';
+  const tW = fontBold.widthOfTextAtSize(title, 14);
+  page.drawText(title, { x: (pageWidth - tW) / 2, y, size: 14, font: fontBold, color: rgb(0.4, 0.2, 0.6) });
+  y -= 20;
+
+  // Patient info box
+  page.drawRectangle({ x: margin, y: y - 5, width: contentWidth, height: 50, color: rgb(0.95, 0.95, 1), borderColor: blue, borderWidth: 0.5 });
+  page.drawText(`Patient: ${patientName || 'N/A'}`, { x: margin + 10, y: y + 25, size: 10, font: fontBold, color: darkGray });
+  page.drawText(`Procedure: ${procedure || 'N/A'}`, { x: margin + 10, y: y + 10, size: 10, font: fontBold, color: darkGray });
+  if (diagnosis) {
+    page.drawText(`Diagnosis: ${diagnosis}`, { x: margin + 300, y: y + 10, size: 9, font, color: gray });
+  }
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  page.drawText(`Date: ${dateStr}`, { x: margin + 300, y: y + 25, size: 9, font, color: gray });
+  y -= 65;
+
+  // ── PRE-OPERATIVE EDUCATION ──
+  if (preOpEducation) {
+    checkNewPage(30);
+    page.drawRectangle({ x: margin, y: y - 3, width: contentWidth, height: 22, color: rgb(0.1, 0.4, 0.7) });
+    const preTitle = 'PRE-OPERATIVE EDUCATION';
+    page.drawText(preTitle, { x: margin + 8, y: y + 2, size: 11, font: fontBold, color: rgb(1, 1, 1) });
+    y -= 30;
+
+    drawWrapped(preOpEducation, 8, 9, font, darkGray);
+    y -= 10;
+  }
+
+  // ── POST-OPERATIVE EDUCATION ──
+  if (postOpEducation) {
+    checkNewPage(30);
+    page.drawRectangle({ x: margin, y: y - 3, width: contentWidth, height: 22, color: rgb(0.1, 0.5, 0.2) });
+    const postTitle = 'POST-OPERATIVE EDUCATION';
+    page.drawText(postTitle, { x: margin + 8, y: y + 2, size: 11, font: fontBold, color: rgb(1, 1, 1) });
+    y -= 30;
+
+    drawWrapped(postOpEducation, 8, 9, font, darkGray);
+    y -= 10;
+  }
+
+  // ── Disclaimer ──
+  checkNewPage(40);
+  y -= 10;
+  page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 0.5, color: gray });
+  y -= 14;
+  drawWrapped(
+    'IMPORTANT: This education material is provided as general guidance for your planned procedure. ' +
+    'It does not replace direct consultation with your surgeon. If you have any questions or concerns, ' +
+    'please discuss them with your surgical team at Niger Foundation Hospital.',
+    8, 7.5, fontItalic, gray
+  );
+
+  // ── Footer on all pages ──
+  const footer = `Niger Foundation Hospital Enugu – Plastic Surgery Unit | Patient Education | CONFIDENTIAL`;
+  const fW = font.widthOfTextAtSize(footer, 7);
+  const pages = doc.getPages();
+  for (const p of pages) {
+    p.drawText(footer, { x: (pageWidth - fW) / 2, y: 25, size: 7, font, color: rgb(0.5, 0.5, 0.5) });
+  }
+
+  return Buffer.from(await doc.save());
+}

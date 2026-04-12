@@ -115,6 +115,23 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // Education PDF (standalone A4 for sharing/printing)
+  getEducationPdf: async (data) => {
+    const result = await request('/education-pdf', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    const byteChars = atob(result.data)
+    const byteArray = new Uint8Array(byteChars.length)
+    for (let i = 0; i < byteChars.length; i++) {
+      byteArray[i] = byteChars.charCodeAt(i)
+    }
+    return {
+      blob: new Blob([byteArray], { type: 'application/pdf' }),
+      filename: result.filename,
+    }
+  },
+
   // Surgery PDF
   getSurgeryPdf: async (id) => {
     const result = await request(`/admin/surgery-pdf/${id}`)

@@ -218,6 +218,8 @@ export default function BookSurgery() {
   const [scrolledToEnd, setScrolledToEnd] = useState(false)
   const termsRef = useRef(null)
   const [educationLoading, setEducationLoading] = useState(false)
+  const [educationPdfLoading, setEducationPdfLoading] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
   const [expandedPanel, setExpandedPanel] = useState(null)
   const [mealPlan, setMealPlan] = useState(null)
   const [mealPlanLoading, setMealPlanLoading] = useState(false)
@@ -497,6 +499,101 @@ export default function BookSurgery() {
     }
   }
 
+  // ─── SAVE / LOAD DRAFT (localStorage) ───
+  const DRAFT_KEY = 'nfh_surgery_draft'
+
+  const saveDraft = () => {
+    try {
+      const draftData = { form, mealPlan, acceptedTerms, scrolledToEnd, isReturningPatient, patientQuery, savedAt: new Date().toISOString() }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData))
+      setDraftSaved(true)
+      setTimeout(() => setDraftSaved(false), 3000)
+    } catch {
+      setError('Failed to save draft')
+    }
+  }
+
+  const loadDraft = () => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return false
+      const draft = JSON.parse(raw)
+      if (draft.form) setForm(draft.form)
+      if (draft.mealPlan) setMealPlan(draft.mealPlan)
+      if (draft.acceptedTerms) setAcceptedTerms(draft.acceptedTerms)
+      if (draft.scrolledToEnd) setScrolledToEnd(draft.scrolledToEnd)
+      if (draft.isReturningPatient) setIsReturningPatient(draft.isReturningPatient)
+      if (draft.patientQuery) setPatientQuery(draft.patientQuery)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY)
+  }
+
+  // Load draft on mount
+  useEffect(() => {
+    const hasDraft = localStorage.getItem(DRAFT_KEY)
+    if (hasDraft) {
+      const loaded = loadDraft()
+      if (loaded) setDraftSaved(false)
+    }
+  }, [])
+
+  // ─── EDUCATION PDF DOWNLOAD ───
+  const downloadEducationPdf = async () => {
+    if (!form.pre_op_education && !form.post_op_education) return
+    setEducationPdfLoading(true)
+    try {
+      const result = await api.getEducationPdf({
+        patient_name: form.full_name,
+        procedure: form.procedure_name,
+        diagnosis: form.diagnosis,
+        pre_op_education: form.pre_op_education,
+        post_op_education: form.post_op_education,
+      })
+      const url = URL.createObjectURL(result.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError('Failed to generate education PDF: ' + err.message)
+    } finally {
+      setEducationPdfLoading(false)
+    }
+  }
+
+  // ─── SHARE EDUCATION ON WHATSAPP ───
+  const shareEducationWhatsApp = () => {
+    const phone = form.phone_number ? form.phone_number.replace(/[^0-9]/g, '') : ''
+    const fullPhone = phone ? `234${phone}` : ''
+
+    let text = `*NIGER FOUNDATION HOSPITAL, ENUGU*\n*Plastic Surgery Unit — Patient Education*\n\n`
+    text += `Patient: ${form.full_name || 'N/A'}\n`
+    text += `Procedure: ${form.procedure_name || 'N/A'}\n\n`
+
+    if (form.pre_op_education) {
+      text += `📘 *PRE-OPERATIVE EDUCATION*\n\n${form.pre_op_education}\n\n`
+    }
+    if (form.post_op_education) {
+      text += `📗 *POST-OPERATIVE EDUCATION*\n\n${form.post_op_education}\n\n`
+    }
+
+    text += `_This information is provided for your guidance. Please discuss any concerns with your surgical team._\n`
+    text += `\n— Niger Foundation Hospital, Enugu`
+
+    const encoded = encodeURIComponent(text)
+    const url = fullPhone
+      ? `https://wa.me/${fullPhone}?text=${encoded}`
+      : `https://wa.me/?text=${encoded}`
+    window.open(url, '_blank')
+  }
+
   const allCompulsoryChecked = Object.values(form.compulsory_tests).every(Boolean)
 
   const handleSubmit = async (e) => {
@@ -611,6 +708,7 @@ export default function BookSurgery() {
         post_op_education: form.post_op_education,
       }
       const result = await api.bookSurgery(data)
+      clearDraft()
       navigate('/surgery-confirmation', { state: { surgery: result } })
     } catch (err) {
       setError(err.message)
@@ -653,6 +751,19 @@ export default function BookSurgery() {
     <main className="max-w-3xl mx-auto px-4 py-8 relative z-10">
       <h1 className="text-2xl font-bold text-blue-800 mb-2">Book a Surgery</h1>
       <p className="text-sm text-gray-500 mb-6">Complete pre-operative planning and booking form</p>
+
+      {localStorage.getItem(DRAFT_KEY) && !draftSaved && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
+          <span className="text-sm flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Draft loaded — continue where you left off
+          </span>
+          <button type="button" onClick={() => { clearDraft(); window.location.reload() }}
+            className="text-xs text-amber-600 hover:text-amber-800 underline">
+            Start Fresh
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -1362,6 +1473,30 @@ export default function BookSurgery() {
               </div>
             </div>
           )}
+
+          {/* Education Share Buttons — PDF Download + WhatsApp */}
+          {(form.pre_op_education || form.post_op_education) && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-3">Share education material with patient:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button type="button" onClick={downloadEducationPdf} disabled={educationPdfLoading}
+                  className="flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50">
+                  {educationPdfLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>📥 Download PDF (A4)</>
+                  )}
+                </button>
+                <button type="button" onClick={shareEducationWhatsApp}
+                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition">
+                  📱 Share on WhatsApp
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ─── Section 9: Terms & Conditions ─── */}
@@ -1434,13 +1569,42 @@ export default function BookSurgery() {
           </div>
         )}
 
-        {/* Submit */}
-        {essentialComplete && acceptedTerms && (
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg shadow-md transition disabled:opacity-50">
-            {loading ? 'Submitting Surgery Booking...' : 'Submit Surgery Booking'}
+        {/* ─── Save Draft + Confirm Booking ─── */}
+        <div className="space-y-3">
+          {/* Save Draft — always visible */}
+          <button type="button" onClick={saveDraft}
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-lg shadow-md transition flex items-center justify-center gap-2">
+            {draftSaved ? (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                Draft Saved!
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                Save Draft (Continue Later)
+              </>
+            )}
           </button>
-        )}
+
+          {/* Confirm Booking — only when complete */}
+          {essentialComplete && acceptedTerms && (
+            <button type="submit" disabled={loading}
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2">
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Confirming Surgery Booking...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Confirm Surgery Booking
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </form>
     </main>
   )
