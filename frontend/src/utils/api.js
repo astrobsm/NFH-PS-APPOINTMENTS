@@ -101,6 +101,27 @@ export const api = {
   deleteSurgery: (id) =>
     request(`/admin/surgeries/${id}`, { method: 'DELETE' }),
 
+  // Surgery education (AI-aided)
+  generateSurgeryEducation: (procedureName, diagnosis) =>
+    request('/surgery-education', {
+      method: 'POST',
+      body: JSON.stringify({ procedure_name: procedureName, diagnosis }),
+    }),
+
+  // Surgery PDF
+  getSurgeryPdf: async (id) => {
+    const result = await request(`/admin/surgery-pdf/${id}`)
+    const byteChars = atob(result.data)
+    const byteArray = new Uint8Array(byteChars.length)
+    for (let i = 0; i < byteChars.length; i++) {
+      byteArray[i] = byteChars.charCodeAt(i)
+    }
+    return {
+      blob: new Blob([byteArray], { type: 'application/pdf' }),
+      filename: result.filename,
+    }
+  },
+
   exportPdf: async (date) => {
     const result = await request('/admin/schedule-print?date=' + date, { method: 'POST' })
     const byteChars = atob(result.data)
