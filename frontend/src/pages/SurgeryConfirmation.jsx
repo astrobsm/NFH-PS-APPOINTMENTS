@@ -59,11 +59,21 @@ export default function SurgeryConfirmation() {
   const riskBadge = (level) => {
     if (!level) return null
     const colors = {
-      Low: 'bg-green-100 text-green-700',
-      Moderate: 'bg-amber-100 text-amber-700',
-      High: 'bg-red-100 text-red-700',
+      'Low Risk': 'bg-green-100 text-green-700',
+      'Very Low Risk': 'bg-green-100 text-green-700',
+      'Not at Risk': 'bg-green-100 text-green-700',
+      'Medium Risk': 'bg-amber-100 text-amber-700',
+      'Moderate Risk': 'bg-amber-100 text-amber-700',
+      'At Risk': 'bg-amber-100 text-amber-700',
+      'High Risk': 'bg-orange-100 text-orange-700',
+      'Highest Risk': 'bg-red-100 text-red-700',
+      'Very High Risk': 'bg-red-100 text-red-700',
+      // Legacy support
+      'Low': 'bg-green-100 text-green-700',
+      'Moderate': 'bg-amber-100 text-amber-700',
+      'High': 'bg-red-100 text-red-700',
     }
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[level] || 'bg-gray-100 text-gray-600'}`}>{level}</span>
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colors[level] || 'bg-gray-100 text-gray-600'}`}>{level}</span>
   }
 
   return (
@@ -110,16 +120,56 @@ export default function SurgeryConfirmation() {
         </div>
 
         {/* Risk Assessments */}
-        {(plan.bleeding_risk?.level || plan.dvt_risk?.level || plan.cardiovascular_risk?.level) && (
+        {(plan.bleeding_risk?.level || plan.dvt_risk?.level || plan.cardiovascular_risk?.level || plan.nutritional_assessment?.level || plan.pressure_sore_risk?.level) && (
           <div className="bg-red-50/50 rounded-lg p-4 mb-4">
-            <h3 className="text-sm font-bold text-red-800 mb-2">Risk Assessments</h3>
-            <div className="flex flex-wrap gap-3 text-sm">
-              {plan.bleeding_risk?.level && <div>Bleeding: {riskBadge(plan.bleeding_risk.level)}</div>}
-              {plan.dvt_risk?.level && <div>DVT: {riskBadge(plan.dvt_risk.level)}</div>}
-              {plan.nutritional_assessment?.status && <div>Nutrition: <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{plan.nutritional_assessment.status}</span></div>}
-              {plan.cardiovascular_risk?.level && <div>Cardiovascular: {riskBadge(plan.cardiovascular_risk.level)}</div>}
-              {plan.pressure_sore_risk?.level && <div>Pressure Sore: {riskBadge(plan.pressure_sore_risk.level)}</div>}
+            <h3 className="text-sm font-bold text-red-800 mb-3">Risk Assessments (Validated Scoring Tools)</h3>
+            <div className="space-y-2 text-sm">
+              {plan.bleeding_risk?.level && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-600 font-medium">🩸 Bleeding:</span>
+                  <span className="text-xs text-gray-400">{plan.bleeding_risk.tool || 'Surgical Bleeding Risk'}</span>
+                  {plan.bleeding_risk.score !== undefined && <span className="text-xs bg-white border rounded px-1.5 py-0.5">Score: {plan.bleeding_risk.score}</span>}
+                  {riskBadge(plan.bleeding_risk.level)}
+                </div>
+              )}
+              {plan.dvt_risk?.level && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-600 font-medium">🦵 DVT:</span>
+                  <span className="text-xs text-gray-400">{plan.dvt_risk.tool || 'Caprini Score'}</span>
+                  {plan.dvt_risk.score !== undefined && <span className="text-xs bg-white border rounded px-1.5 py-0.5">Score: {plan.dvt_risk.score}</span>}
+                  {riskBadge(plan.dvt_risk.level)}
+                </div>
+              )}
+              {plan.nutritional_assessment?.level && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-600 font-medium">🍽️ Nutritional:</span>
+                  <span className="text-xs text-gray-400">{plan.nutritional_assessment.tool || 'MUST'}</span>
+                  {plan.nutritional_assessment.score !== undefined && <span className="text-xs bg-white border rounded px-1.5 py-0.5">Score: {plan.nutritional_assessment.score}</span>}
+                  {riskBadge(plan.nutritional_assessment.level)}
+                </div>
+              )}
+              {plan.cardiovascular_risk?.level && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-600 font-medium">❤️ Cardiovascular:</span>
+                  <span className="text-xs text-gray-400">{plan.cardiovascular_risk.tool || 'RCRI'}</span>
+                  {plan.cardiovascular_risk.score !== undefined && <span className="text-xs bg-white border rounded px-1.5 py-0.5">Score: {plan.cardiovascular_risk.score}</span>}
+                  {riskBadge(plan.cardiovascular_risk.level)}
+                </div>
+              )}
+              {plan.pressure_sore_risk?.level && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-gray-600 font-medium">🛏️ Pressure Sore:</span>
+                  <span className="text-xs text-gray-400">{plan.pressure_sore_risk.tool || 'Waterlow'}</span>
+                  {plan.pressure_sore_risk.score !== undefined && <span className="text-xs bg-white border rounded px-1.5 py-0.5">Score: {plan.pressure_sore_risk.score}</span>}
+                  {riskBadge(plan.pressure_sore_risk.level)}
+                </div>
+              )}
             </div>
+            {plan.nutritional_assessment?.meal_plan && (
+              <div className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+                🍲 7-Day Meal Plan generated (included in PDF)
+              </div>
+            )}
           </div>
         )}
 

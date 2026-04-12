@@ -20,8 +20,148 @@ const SURGERY_TYPES = [
   'Other',
 ]
 
-const RISK_LEVELS = ['Low', 'Moderate', 'High']
-const NUTRITIONAL_STATUS = ['Well-nourished', 'Mild malnutrition', 'Moderate malnutrition', 'Severe malnutrition']
+// ─── CAPRINI DVT RISK SCORE ───
+const CAPRINI = [
+  { pts: 1, items: [
+    { key: 'age_41_60', label: 'Age 41–60' },
+    { key: 'minor_surgery', label: 'Minor surgery planned' },
+    { key: 'bmi_gt_25', label: 'BMI > 25' },
+    { key: 'swollen_legs', label: 'Swollen legs (current)' },
+    { key: 'varicose_veins', label: 'Varicose veins' },
+    { key: 'pregnancy', label: 'Pregnancy or postpartum (<1 mo)' },
+    { key: 'ocp_hrt', label: 'OCP / HRT use' },
+    { key: 'sepsis', label: 'Sepsis (≤1 mo)' },
+    { key: 'lung_disease', label: 'Serious lung disease incl. pneumonia / COPD' },
+    { key: 'acute_mi', label: 'Acute myocardial infarction' },
+    { key: 'chf', label: 'Congestive heart failure (≤1 mo)' },
+    { key: 'ibd', label: 'History of inflammatory bowel disease' },
+    { key: 'bed_rest', label: 'Medical patient currently at bed rest' },
+  ]},
+  { pts: 2, items: [
+    { key: 'age_61_74', label: 'Age 61–74' },
+    { key: 'major_surgery', label: 'Major open surgery (>45 min)' },
+    { key: 'laparoscopic', label: 'Laparoscopic surgery (>45 min)' },
+    { key: 'malignancy', label: 'Malignancy (present or previous)' },
+    { key: 'confined_bed', label: 'Confined to bed (>72 hours)' },
+    { key: 'immobilizing_cast', label: 'Immobilizing plaster cast (≤1 mo)' },
+    { key: 'central_line', label: 'Central venous access' },
+  ]},
+  { pts: 3, items: [
+    { key: 'age_75', label: 'Age ≥75' },
+    { key: 'dvt_pe_history', label: 'History of DVT/PE' },
+    { key: 'family_thrombosis', label: 'Family history of thrombosis' },
+    { key: 'factor_v', label: 'Factor V Leiden positive' },
+    { key: 'prothrombin_20210a', label: 'Prothrombin 20210A positive' },
+    { key: 'lupus_anticoag', label: 'Lupus anticoagulant positive' },
+    { key: 'anticardiolipin', label: 'Anticardiolipin antibodies elevated' },
+    { key: 'homocysteine', label: 'Elevated serum homocysteine' },
+    { key: 'hit', label: 'Heparin-induced thrombocytopenia (HIT)' },
+    { key: 'other_thrombophilia', label: 'Other congenital/acquired thrombophilia' },
+  ]},
+  { pts: 5, items: [
+    { key: 'stroke', label: 'Stroke (≤1 mo)' },
+    { key: 'arthroplasty', label: 'Elective major lower extremity arthroplasty' },
+    { key: 'fracture', label: 'Hip, pelvis, or leg fracture (≤1 mo)' },
+    { key: 'spinal_injury', label: 'Acute spinal cord injury (≤1 mo)' },
+  ]},
+]
+
+// ─── MUST (Malnutrition Universal Screening Tool) ───
+const MUST_BMI = [
+  { value: '0', label: 'BMI > 20 kg/m² (Score 0)' },
+  { value: '1', label: 'BMI 18.5 – 20 kg/m² (Score 1)' },
+  { value: '2', label: 'BMI < 18.5 kg/m² (Score 2)' },
+]
+const MUST_WEIGHT = [
+  { value: '0', label: 'Unplanned weight loss < 5% in 3–6 months (Score 0)' },
+  { value: '1', label: 'Unplanned weight loss 5–10% (Score 1)' },
+  { value: '2', label: 'Unplanned weight loss > 10% (Score 2)' },
+]
+
+// ─── RCRI (Revised Cardiac Risk Index — Lee Index) ───
+const RCRI_ITEMS = [
+  { key: 'high_risk_surg', label: 'High-risk surgery (intraperitoneal, intrathoracic, suprainguinal vascular)' },
+  { key: 'ihd', label: 'History of ischaemic heart disease' },
+  { key: 'chf', label: 'History of congestive heart failure' },
+  { key: 'cvd', label: 'History of cerebrovascular disease (stroke / TIA)' },
+  { key: 'insulin', label: 'Pre-operative insulin treatment for diabetes mellitus' },
+  { key: 'creatinine', label: 'Pre-operative serum creatinine > 2 mg/dL (177 µmol/L)' },
+]
+
+// ─── WATERLOW PRESSURE SORE RISK SCORE ───
+const WL_BUILD = [
+  { v: '0', l: 'Average build/weight for height' },
+  { v: '1', l: 'Above average' },
+  { v: '2', l: 'Obese' },
+  { v: '3', l: 'Below average' },
+]
+const WL_SKIN = [
+  { v: '0', l: 'Healthy' },
+  { v: '1', l: 'Tissue paper / Dry / Oedematous / Clammy' },
+  { v: '2', l: 'Discoloured (Grade 1)' },
+  { v: '3', l: 'Broken / Spot (Grade 2–4)' },
+]
+const WL_CONTINENCE = [
+  { v: '0', l: 'Complete / Catheterised' },
+  { v: '1', l: 'Urinary incontinence' },
+  { v: '2', l: 'Faecal incontinence' },
+  { v: '3', l: 'Doubly incontinent' },
+]
+const WL_MOBILITY = [
+  { v: '0', l: 'Fully mobile' },
+  { v: '1', l: 'Restless / Fidgety' },
+  { v: '2', l: 'Apathetic' },
+  { v: '3', l: 'Restricted' },
+  { v: '4', l: 'Inert / Traction' },
+  { v: '5', l: 'Chairbound' },
+]
+const WL_APPETITE = [
+  { v: '0', l: 'Average appetite' },
+  { v: '1', l: 'Poor' },
+  { v: '2', l: 'NG tube / Fluids only' },
+  { v: '3', l: 'NBM / Anorexic' },
+]
+const WL_TISSUE = [
+  { key: 'cachexia', label: 'Terminal cachexia', p: 8 },
+  { key: 'cardiac_fail', label: 'Cardiac failure', p: 5 },
+  { key: 'pvd', label: 'Peripheral vascular disease', p: 5 },
+  { key: 'anaemia', label: 'Anaemia', p: 2 },
+  { key: 'smoking', label: 'Smoking', p: 1 },
+]
+const WL_NEURO = [
+  { v: '0', l: 'None' },
+  { v: '4', l: 'Diabetes / MS / CVA' },
+  { v: '5', l: 'Motor / Sensory deficit' },
+  { v: '6', l: 'Paraplegia' },
+]
+const WL_SURGERY = [
+  { v: '0', l: 'None' },
+  { v: '5', l: 'Orthopaedic below waist / On table >2 hrs' },
+  { v: '8', l: 'On table >6 hrs' },
+]
+const WL_MEDS = [
+  { key: 'cytotoxics', label: 'Cytotoxics', p: 4 },
+  { key: 'steroids', label: 'High-dose steroids', p: 4 },
+  { key: 'anti_inflam', label: 'Anti-inflammatory agents', p: 4 },
+]
+
+// ─── SURGICAL BLEEDING RISK ASSESSMENT ───
+const BLEED_1PT = [
+  { key: 'age_gt_65', label: 'Age > 65 years' },
+  { key: 'antiplatelet', label: 'Antiplatelet therapy (Aspirin, Clopidogrel)' },
+  { key: 'inr_high', label: 'INR > 1.5' },
+  { key: 'low_platelets', label: 'Platelet count < 100 × 10⁹/L' },
+  { key: 'active_cancer', label: 'Active cancer' },
+  { key: 'prior_bleed', label: 'Prior major bleeding event' },
+  { key: 'anemia', label: 'Anaemia (Hb < 10 g/dL)' },
+]
+const BLEED_2PT = [
+  { key: 'anticoagulant', label: 'Active anticoagulant therapy (Warfarin, Heparin, DOAC)' },
+  { key: 'bleeding_disorder', label: 'Known bleeding disorder (Haemophilia, vWD, etc.)' },
+  { key: 'liver_disease', label: 'Liver disease / Cirrhosis' },
+  { key: 'renal_failure', label: 'Renal failure (GFR < 30 mL/min)' },
+]
+
 const ANAESTHESIA_TYPES = ['General Anaesthesia', 'Regional – Spinal', 'Regional – Epidural', 'Local Anaesthesia', 'Sedation', 'Combined']
 const DIATHERMY_TYPES = ['Monopolar', 'Bipolar', 'Both']
 
@@ -78,6 +218,10 @@ export default function BookSurgery() {
   const [scrolledToEnd, setScrolledToEnd] = useState(false)
   const termsRef = useRef(null)
   const [educationLoading, setEducationLoading] = useState(false)
+  const [expandedPanel, setExpandedPanel] = useState(null)
+  const [mealPlan, setMealPlan] = useState(null)
+  const [mealPlanLoading, setMealPlanLoading] = useState(false)
+  const [showMealPlan, setShowMealPlan] = useState(false)
 
   // Patient search state
   const [patientQuery, setPatientQuery] = useState('')
@@ -101,16 +245,20 @@ export default function BookSurgery() {
     phone_number: '',
     // Pre-operative planning
     diagnosis: '',
-    bleeding_risk: '',
-    bleeding_risk_notes: '',
-    dvt_risk: '',
-    dvt_risk_notes: '',
-    nutritional_status: '',
-    nutritional_notes: '',
-    cardiovascular_risk: '',
-    cardiovascular_notes: '',
-    pressure_sore_risk: '',
-    pressure_sore_notes: '',
+    // Caprini DVT score items
+    caprini: {},
+    // MUST nutritional score
+    must_bmi: '',
+    must_weight_loss: '',
+    must_acute_disease: false,
+    // RCRI cardiovascular score items
+    rcri: {},
+    // Waterlow pressure sore score
+    wl_build: '', wl_skin: '', wl_continence: '', wl_mobility: '', wl_appetite: '',
+    wl_tissue: {}, wl_neuro: '', wl_surgery: '', wl_meds: {},
+    // Bleeding risk items
+    bleeding: {},
+    bleeding_notes: '',
     // Investigations
     compulsory_tests: { hiv: false, fbc: false, seucr: false, hcv: false, hbsag: false },
     additional_tests: [],
@@ -133,6 +281,109 @@ export default function BookSurgery() {
     pre_op_education: '',
     post_op_education: '',
   })
+
+  // ─── SCORING CALCULATORS ───
+  const calcCaprini = () => {
+    let s = 0
+    CAPRINI.forEach(g => g.items.forEach(i => { if (form.caprini[i.key]) s += g.pts }))
+    return s
+  }
+  const capriniRisk = (s) => {
+    if (s <= 1) return { level: 'Low Risk', color: 'green', pct: '' }
+    if (s === 2) return { level: 'Moderate Risk', color: 'amber', pct: '' }
+    if (s <= 4) return { level: 'High Risk', color: 'orange', pct: '' }
+    return { level: 'Highest Risk', color: 'red', pct: '' }
+  }
+
+  const calcMust = () => (parseInt(form.must_bmi) || 0) + (parseInt(form.must_weight_loss) || 0) + (form.must_acute_disease ? 2 : 0)
+  const mustRisk = (s) => {
+    if (s === 0) return { level: 'Low Risk', color: 'green', action: 'Routine clinical care. Repeat screening weekly (hospital) or monthly (community).' }
+    if (s === 1) return { level: 'Medium Risk', color: 'amber', action: 'Observe — document dietary intake for 3 days. If adequate, little concern. If inadequate, improve and increase overall nutritional intake.' }
+    return { level: 'High Risk', color: 'red', action: 'Treat — refer to dietitian/nutritional support team. Improve and increase overall nutritional intake. Monitor and review care plan weekly.' }
+  }
+
+  const calcRcri = () => RCRI_ITEMS.reduce((s, i) => s + (form.rcri[i.key] ? 1 : 0), 0)
+  const rcriRisk = (s) => {
+    if (s === 0) return { level: 'Very Low Risk', color: 'green', pct: '~3.9% MACE' }
+    if (s === 1) return { level: 'Low Risk', color: 'green', pct: '~6.0% MACE' }
+    if (s === 2) return { level: 'Moderate Risk', color: 'amber', pct: '~10.1% MACE' }
+    return { level: 'High Risk', color: 'red', pct: '≥15% MACE' }
+  }
+
+  const calcWaterlow = () => {
+    let s = 0
+    s += parseInt(form.wl_build) || 0
+    s += parseInt(form.wl_skin) || 0
+    // Sex from gender
+    if (form.gender === 'Male') s += 1
+    else if (form.gender === 'Female') s += 2
+    // Age
+    const age = parseInt(form.age) || 0
+    if (age >= 80) s += 5
+    else if (age >= 75) s += 4
+    else if (age >= 65) s += 3
+    else if (age >= 50) s += 2
+    else if (age >= 14) s += 1
+    s += parseInt(form.wl_continence) || 0
+    s += parseInt(form.wl_mobility) || 0
+    s += parseInt(form.wl_appetite) || 0
+    WL_TISSUE.forEach(i => { if (form.wl_tissue[i.key]) s += i.p })
+    s += parseInt(form.wl_neuro) || 0
+    s += parseInt(form.wl_surgery) || 0
+    WL_MEDS.forEach(i => { if (form.wl_meds[i.key]) s += i.p })
+    return s
+  }
+  const waterlowRisk = (s) => {
+    if (s < 10) return { level: 'Not at Risk', color: 'green' }
+    if (s <= 14) return { level: 'At Risk', color: 'amber' }
+    if (s <= 19) return { level: 'High Risk', color: 'orange' }
+    return { level: 'Very High Risk', color: 'red' }
+  }
+
+  const calcBleeding = () => {
+    let s = 0
+    BLEED_1PT.forEach(i => { if (form.bleeding[i.key]) s += 1 })
+    BLEED_2PT.forEach(i => { if (form.bleeding[i.key]) s += 2 })
+    return s
+  }
+  const bleedingRisk = (s) => {
+    if (s <= 1) return { level: 'Low Risk', color: 'green' }
+    if (s <= 3) return { level: 'Moderate Risk', color: 'amber' }
+    return { level: 'High Risk', color: 'red' }
+  }
+
+  const scoreBadge = (risk) => {
+    const colors = { green: 'bg-green-100 text-green-800', amber: 'bg-amber-100 text-amber-800', orange: 'bg-orange-100 text-orange-800', red: 'bg-red-100 text-red-800' }
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colors[risk.color]}`}>{risk.level}</span>
+  }
+
+  // ─── SCORING TOGGLES ───
+  const toggleScoreItem = (section, key) => {
+    setForm(f => ({ ...f, [section]: { ...f[section], [key]: !f[section]?.[key] } }))
+  }
+  const togglePanel = (panel) => setExpandedPanel(expandedPanel === panel ? null : panel)
+
+  // ─── MEAL PLAN GENERATION ───
+  const generateMealPlan = async () => {
+    setMealPlanLoading(true)
+    try {
+      const mustScore = calcMust()
+      const mustR = mustRisk(mustScore)
+      const result = await api.generateMealPlan({
+        must_score: mustScore,
+        must_risk: mustR.level,
+        age: form.age,
+        gender: form.gender,
+        diagnosis: form.diagnosis,
+      })
+      setMealPlan(result.meal_plan)
+      setShowMealPlan(true)
+    } catch (err) {
+      setError('Failed to generate meal plan: ' + err.message)
+    } finally {
+      setMealPlanLoading(false)
+    }
+  }
 
   const handleTermsScroll = () => {
     const el = termsRef.current
@@ -284,6 +535,13 @@ export default function BookSurgery() {
     setLoading(true)
     try {
       const phone = form.phone_number ? '+234' + form.phone_number.replace(/^0+/, '') : ''
+
+      const capScore = calcCaprini()
+      const mustScore = calcMust()
+      const rcriScore = calcRcri()
+      const wlScore = calcWaterlow()
+      const bleedScore = calcBleeding()
+
       const data = {
         full_name: form.full_name,
         age: parseInt(form.age),
@@ -296,11 +554,44 @@ export default function BookSurgery() {
         procedure_name: form.procedure_name,
         pre_op_planning: {
           diagnosis: form.diagnosis,
-          bleeding_risk: { level: form.bleeding_risk, notes: form.bleeding_risk_notes },
-          dvt_risk: { level: form.dvt_risk, notes: form.dvt_risk_notes },
-          nutritional_assessment: { status: form.nutritional_status, notes: form.nutritional_notes },
-          cardiovascular_risk: { level: form.cardiovascular_risk, notes: form.cardiovascular_notes },
-          pressure_sore_risk: { level: form.pressure_sore_risk, notes: form.pressure_sore_notes },
+          bleeding_risk: {
+            tool: 'Surgical Bleeding Risk Score',
+            score: bleedScore,
+            level: bleedingRisk(bleedScore).level,
+            items: form.bleeding,
+            notes: form.bleeding_notes,
+          },
+          dvt_risk: {
+            tool: 'Caprini Score',
+            score: capScore,
+            level: capriniRisk(capScore).level,
+            items: form.caprini,
+          },
+          nutritional_assessment: {
+            tool: 'MUST (Malnutrition Universal Screening Tool)',
+            score: mustScore,
+            level: mustRisk(mustScore).level,
+            bmi_score: form.must_bmi,
+            weight_loss_score: form.must_weight_loss,
+            acute_disease: form.must_acute_disease,
+            meal_plan: mealPlan || null,
+          },
+          cardiovascular_risk: {
+            tool: 'RCRI (Lee Index)',
+            score: rcriScore,
+            level: rcriRisk(rcriScore).level,
+            items: form.rcri,
+          },
+          pressure_sore_risk: {
+            tool: 'Waterlow Score',
+            score: wlScore,
+            level: waterlowRisk(wlScore).level,
+            items: {
+              build: form.wl_build, skin: form.wl_skin, continence: form.wl_continence,
+              mobility: form.wl_mobility, appetite: form.wl_appetite, tissue: form.wl_tissue,
+              neuro: form.wl_neuro, surgery: form.wl_surgery, meds: form.wl_meds,
+            },
+          },
         },
         investigations: {
           compulsory: form.compulsory_tests,
@@ -333,6 +624,30 @@ export default function BookSurgery() {
   // Check if essential fields are complete for showing terms
   const essentialComplete = form.full_name && form.age && form.gender && form.diagnosis
     && allCompulsoryChecked && form.procedure_name && form.anaesthesia_type && form.preferred_date
+
+  // Computed scores for display
+  const capScore = calcCaprini()
+  const capRisk = capriniRisk(capScore)
+  const mustScore = calcMust()
+  const mustR = mustRisk(mustScore)
+  const rcriScore = calcRcri()
+  const rcriR = rcriRisk(rcriScore)
+  const wlScore = calcWaterlow()
+  const wlRisk = waterlowRisk(wlScore)
+  const bleedScore = calcBleeding()
+  const bleedR = bleedingRisk(bleedScore)
+
+  // Helper: render a WL select
+  const wlSelect = (field, options, label) => (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <select value={form[field]} onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
+        className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white focus:ring-2 focus:ring-emerald-400 outline-none">
+        <option value="">-- Select --</option>
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+    </div>
+  )
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 relative z-10">
@@ -423,13 +738,15 @@ export default function BookSurgery() {
           </div>
         </div>
 
-        {/* ─── Section 2: Pre-Operative Planning ─── */}
+        {/* ─── Section 2: Pre-Operative Planning (Validated Scoring Tools) ─── */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-7 h-7 bg-purple-700 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
             Pre-Operative Planning
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full ml-1">Validated Scoring Tools</span>
           </h2>
-          <div className="space-y-5">
+          <div className="space-y-4">
+            {/* Diagnosis */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis *</label>
               <textarea name="diagnosis" value={form.diagnosis} onChange={handleChange} rows={2} required
@@ -437,33 +754,293 @@ export default function BookSurgery() {
                 placeholder="Enter the clinical diagnosis..." />
             </div>
 
-            {/* Risk Assessments */}
-            {[
-              { field: 'bleeding_risk', label: 'Bleeding Risk Assessment', color: 'red', levels: RISK_LEVELS,
-                guidance: 'Consider: anticoagulant use, bleeding disorders, liver disease, thrombocytopenia' },
-              { field: 'dvt_risk', label: 'DVT Risk Assessment', color: 'orange', levels: RISK_LEVELS,
-                guidance: 'Consider: immobility, obesity, malignancy, prior DVT, OCP use, age >40' },
-              { field: 'nutritional_status', label: 'Nutritional Assessment', color: 'amber', levels: NUTRITIONAL_STATUS, isNutrition: true,
-                guidance: 'Consider: BMI, serum albumin, weight loss history, dietary intake' },
-              { field: 'cardiovascular_risk', label: 'Cardiovascular Risk Assessment', color: 'blue', levels: RISK_LEVELS,
-                guidance: 'Consider: hypertension, diabetes, IHD, heart failure, ECG findings' },
-              { field: 'pressure_sore_risk', label: 'Pressure Sore Risk Assessment', color: 'emerald', levels: RISK_LEVELS,
-                guidance: 'Consider: mobility, nutrition, skin integrity, incontinence, sensory perception' },
-            ].map(({ field, label, color, levels, guidance, isNutrition }) => (
-              <div key={field} className={`border border-${color}-200 rounded-lg p-4 bg-${color}-50/30`}>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{label}</label>
-                <p className="text-xs text-gray-500 mb-2 italic">{guidance}</p>
-                <select name={field} value={form[field]} onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-purple-500 outline-none mb-2">
-                  <option value="">-- Select {isNutrition ? 'Status' : 'Risk Level'} --</option>
-                  {levels.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <input type="text" name={`${field}_notes`} value={form[`${field}_notes`] || form[`${field === 'nutritional_status' ? 'nutritional' : field}_notes`] || ''}
-                  onChange={(e) => setForm(f => ({ ...f, [`${field}_notes`]: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="Additional notes (optional)..." />
-              </div>
-            ))}
+            {/* ── Bleeding Risk Assessment ── */}
+            <div className="border border-red-200 rounded-lg overflow-hidden">
+              <button type="button" onClick={() => togglePanel('bleeding')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-red-50 hover:bg-red-100 transition text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-red-900">🩸 Bleeding Risk Assessment</span>
+                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded border">Score: {bleedScore}</span>
+                  {scoreBadge(bleedR)}
+                </div>
+                <svg className={`w-5 h-5 text-red-400 transition-transform ${expandedPanel === 'bleeding' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {expandedPanel === 'bleeding' && (
+                <div className="p-4 space-y-3 bg-white">
+                  <p className="text-xs text-gray-500 italic">Adapted surgical bleeding risk assessment. Check all that apply.</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">1 Point Each:</p>
+                    {BLEED_1PT.map(i => (
+                      <label key={i.key} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-red-50 cursor-pointer">
+                        <input type="checkbox" checked={!!form.bleeding[i.key]} onChange={() => toggleScoreItem('bleeding', i.key)}
+                          className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" />
+                        <span className="text-sm text-gray-700">{i.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">2 Points Each:</p>
+                    {BLEED_2PT.map(i => (
+                      <label key={i.key} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-red-50 cursor-pointer">
+                        <input type="checkbox" checked={!!form.bleeding[i.key]} onChange={() => toggleScoreItem('bleeding', i.key)}
+                          className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500" />
+                        <span className="text-sm text-gray-700">{i.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <input type="text" name="bleeding_notes" value={form.bleeding_notes} onChange={handleChange}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-red-300"
+                    placeholder="Additional notes (e.g. specific medications, lab values)..." />
+                  <div className="bg-red-50 rounded p-2 text-xs text-red-800">
+                    <strong>Interpretation:</strong> 0–1 = Low Risk | 2–3 = Moderate Risk | ≥4 = High Risk
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── DVT Risk — Caprini Score ── */}
+            <div className="border border-orange-200 rounded-lg overflow-hidden">
+              <button type="button" onClick={() => togglePanel('caprini')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-orange-50 hover:bg-orange-100 transition text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-orange-900">🦵 DVT Risk — Caprini Score</span>
+                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded border">Score: {capScore}</span>
+                  {scoreBadge(capRisk)}
+                </div>
+                <svg className={`w-5 h-5 text-orange-400 transition-transform ${expandedPanel === 'caprini' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {expandedPanel === 'caprini' && (
+                <div className="p-4 space-y-3 bg-white">
+                  <p className="text-xs text-gray-500 italic">Caprini VTE Risk Assessment Model (2005). Check all risk factors that apply.</p>
+                  {CAPRINI.map(group => (
+                    <div key={group.pts} className="space-y-1">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{group.pts} Point{group.pts > 1 ? 's' : ''} Each:</p>
+                      {group.items.map(i => (
+                        <label key={i.key} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-orange-50 cursor-pointer">
+                          <input type="checkbox" checked={!!form.caprini[i.key]} onChange={() => toggleScoreItem('caprini', i.key)}
+                            className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" />
+                          <span className="text-sm text-gray-700">{i.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                  <div className="bg-orange-50 rounded p-2 text-xs text-orange-800">
+                    <strong>Interpretation:</strong> 0–1 = Low | 2 = Moderate | 3–4 = High | ≥5 = Highest Risk. <br />
+                    <strong>Prophylaxis:</strong> Low = early ambulation | Moderate = SCDs ± LMWH | High/Highest = LMWH + SCDs
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Nutritional Assessment — MUST Score ── */}
+            <div className="border border-amber-200 rounded-lg overflow-hidden">
+              <button type="button" onClick={() => togglePanel('must')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 hover:bg-amber-100 transition text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-amber-900">🍽️ Nutritional — MUST Score</span>
+                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded border">Score: {mustScore}</span>
+                  {scoreBadge(mustR)}
+                </div>
+                <svg className={`w-5 h-5 text-amber-400 transition-transform ${expandedPanel === 'must' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {expandedPanel === 'must' && (
+                <div className="p-4 space-y-4 bg-white">
+                  <p className="text-xs text-gray-500 italic">Malnutrition Universal Screening Tool (BAPEN). Complete all 3 steps.</p>
+                  {/* Step 1: BMI */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Step 1: BMI Score</label>
+                    <select value={form.must_bmi} onChange={(e) => setForm(f => ({ ...f, must_bmi: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                      <option value="">-- Select BMI Range --</option>
+                      {MUST_BMI.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  {/* Step 2: Weight Loss */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Step 2: Unplanned Weight Loss</label>
+                    <select value={form.must_weight_loss} onChange={(e) => setForm(f => ({ ...f, must_weight_loss: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-400 outline-none">
+                      <option value="">-- Select Weight Loss --</option>
+                      {MUST_WEIGHT.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  {/* Step 3: Acute Disease */}
+                  <div>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={form.must_acute_disease}
+                        onChange={() => setForm(f => ({ ...f, must_acute_disease: !f.must_acute_disease }))}
+                        className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                      <div>
+                        <span className="text-sm font-semibold text-gray-700">Step 3: Acute Disease Effect (Score +2)</span>
+                        <p className="text-xs text-gray-500">Patient is acutely ill AND there has been or is likely to be no nutritional intake for &gt;5 days</p>
+                      </div>
+                    </label>
+                  </div>
+                  {/* MUST Result */}
+                  <div className={`rounded p-3 ${mustR.color === 'green' ? 'bg-green-50' : mustR.color === 'amber' ? 'bg-amber-50' : 'bg-red-50'}`}>
+                    <p className={`font-bold text-sm ${mustR.color === 'green' ? 'text-green-800' : mustR.color === 'amber' ? 'text-amber-800' : 'text-red-800'}`}>
+                      Total MUST Score: {mustScore} — {mustR.level}
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">{mustR.action}</p>
+                  </div>
+                  {/* Meal Plan Button */}
+                  {mustScore >= 1 && (
+                    <div className="border-t border-amber-200 pt-3">
+                      <button type="button" onClick={generateMealPlan} disabled={mealPlanLoading}
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 rounded-lg shadow transition disabled:opacity-50 flex items-center justify-center gap-2">
+                        {mealPlanLoading ? (
+                          <><svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Generating Meal Plan...</>
+                        ) : (
+                          <>🍲 Generate 7-Day Meal Plan (SE Nigeria)</>
+                        )}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-1 text-center">Based on Food Composition Table for Africa &amp; foods available in South-East Nigeria</p>
+
+                      {mealPlan && (
+                        <div className="mt-3">
+                          <button type="button" onClick={() => setShowMealPlan(!showMealPlan)}
+                            className="text-sm font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1">
+                            <svg className={`w-4 h-4 transition-transform ${showMealPlan ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            {showMealPlan ? 'Hide' : 'View'} 7-Day Meal Plan
+                          </button>
+                          {showMealPlan && (
+                            <div className="mt-2 space-y-3">
+                              <div className="bg-amber-50 rounded p-2 text-xs text-amber-800">
+                                <strong>Daily Target:</strong> ~{mealPlan.calorie_target} kcal | Protein: {mealPlan.protein_target}
+                              </div>
+                              {mealPlan.days.map((day, idx) => (
+                                <div key={idx} className="border border-amber-100 rounded-lg overflow-hidden">
+                                  <div className="bg-amber-100 px-3 py-2 font-semibold text-sm text-amber-900">{day.day}</div>
+                                  <div className="p-3 space-y-2 text-sm">
+                                    {[
+                                      { time: '🌅 Breakfast', meal: day.breakfast },
+                                      { time: '🍎 Mid-Morning', meal: day.mid_morning },
+                                      { time: '☀️ Lunch', meal: day.lunch },
+                                      { time: '🍌 Afternoon', meal: day.afternoon },
+                                      { time: '🌙 Dinner', meal: day.dinner },
+                                      { time: '😴 Bedtime', meal: day.bedtime },
+                                    ].map(({ time, meal }) => meal && (
+                                      <div key={time} className="flex gap-2">
+                                        <span className="font-medium text-gray-600 w-28 shrink-0">{time}</span>
+                                        <div>
+                                          <span className="text-gray-800">{meal.meal}</span>
+                                          <span className="text-xs text-gray-400 ml-2">({meal.calories} kcal, {meal.protein} protein)</span>
+                                          {meal.notes && <p className="text-xs text-gray-500 italic">{meal.notes}</p>}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                              {mealPlan.supplements && (
+                                <div className="bg-blue-50 rounded p-3 text-xs text-blue-800">
+                                  <strong>Recommended Supplements:</strong> {mealPlan.supplements.join(', ')}
+                                </div>
+                              )}
+                              {mealPlan.notes && (
+                                <p className="text-xs text-gray-500 italic">{mealPlan.notes}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Cardiovascular Risk — RCRI (Lee Index) ── */}
+            <div className="border border-blue-200 rounded-lg overflow-hidden">
+              <button type="button" onClick={() => togglePanel('rcri')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-blue-900">❤️ Cardiovascular — RCRI (Lee Index)</span>
+                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded border">Score: {rcriScore}</span>
+                  {scoreBadge(rcriR)}
+                  {rcriR.pct && <span className="text-xs text-gray-400">{rcriR.pct}</span>}
+                </div>
+                <svg className={`w-5 h-5 text-blue-400 transition-transform ${expandedPanel === 'rcri' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {expandedPanel === 'rcri' && (
+                <div className="p-4 space-y-3 bg-white">
+                  <p className="text-xs text-gray-500 italic">Revised Cardiac Risk Index (Lee et al., 1999). 6 independent predictors of major cardiac events. Check all that apply.</p>
+                  <div className="space-y-1">
+                    {RCRI_ITEMS.map(i => (
+                      <label key={i.key} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-blue-50 cursor-pointer">
+                        <input type="checkbox" checked={!!form.rcri[i.key]} onChange={() => toggleScoreItem('rcri', i.key)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                        <span className="text-sm text-gray-700">{i.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="bg-blue-50 rounded p-2 text-xs text-blue-800">
+                    <strong>Interpretation:</strong> 0 = Very Low (~3.9%) | 1 = Low (~6%) | 2 = Moderate (~10.1%) | ≥3 = High (≥15%) risk of Major Adverse Cardiac Events (MACE).
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Pressure Sore Risk — Waterlow Score ── */}
+            <div className="border border-emerald-200 rounded-lg overflow-hidden">
+              <button type="button" onClick={() => togglePanel('waterlow')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-emerald-50 hover:bg-emerald-100 transition text-left">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-emerald-900">🛏️ Pressure Sore — Waterlow Score</span>
+                  <span className="text-xs bg-white text-gray-500 px-2 py-0.5 rounded border">Score: {wlScore}</span>
+                  {scoreBadge(wlRisk)}
+                </div>
+                <svg className={`w-5 h-5 text-emerald-400 transition-transform ${expandedPanel === 'waterlow' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {expandedPanel === 'waterlow' && (
+                <div className="p-4 space-y-3 bg-white">
+                  <p className="text-xs text-gray-500 italic">Waterlow Pressure Ulcer Risk Assessment (Waterlow, 1985). Age/sex auto-calculated from Section 1.</p>
+                  {form.age && form.gender && (
+                    <div className="bg-gray-50 rounded p-2 text-xs text-gray-600">
+                      Auto-scored: Gender ({form.gender} = {form.gender === 'Male' ? 1 : 2} pts) + Age ({form.age}y = {parseInt(form.age) >= 80 ? 5 : parseInt(form.age) >= 75 ? 4 : parseInt(form.age) >= 65 ? 3 : parseInt(form.age) >= 50 ? 2 : parseInt(form.age) >= 14 ? 1 : 0} pts)
+                    </div>
+                  )}
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {wlSelect('wl_build', WL_BUILD, 'Build / Weight for Height')}
+                    {wlSelect('wl_skin', WL_SKIN, 'Skin Type / Visual Risk')}
+                    {wlSelect('wl_continence', WL_CONTINENCE, 'Continence')}
+                    {wlSelect('wl_mobility', WL_MOBILITY, 'Mobility')}
+                    {wlSelect('wl_appetite', WL_APPETITE, 'Appetite')}
+                    {wlSelect('wl_neuro', WL_NEURO, 'Neurological Deficit')}
+                    {wlSelect('wl_surgery', WL_SURGERY, 'Major Surgery / Trauma')}
+                  </div>
+                  {/* Tissue Malnutrition Risks */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Tissue Malnutrition (Special Risks):</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {WL_TISSUE.map(i => (
+                        <label key={i.key} className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={!!form.wl_tissue[i.key]} onChange={() => toggleScoreItem('wl_tissue', i.key)}
+                            className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
+                          <span className="text-xs text-gray-700">{i.label} (+{i.p})</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Medication Risks */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Medication Risks:</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {WL_MEDS.map(i => (
+                        <label key={i.key} className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={!!form.wl_meds[i.key]} onChange={() => toggleScoreItem('wl_meds', i.key)}
+                            className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500" />
+                          <span className="text-xs text-gray-700">{i.label} (+{i.p})</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-emerald-50 rounded p-2 text-xs text-emerald-800">
+                    <strong>Interpretation:</strong> &lt;10 = Not at risk | 10–14 = At risk | 15–19 = High risk | 20+ = Very high risk
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -809,7 +1386,7 @@ export default function BookSurgery() {
               <p className="mt-1">Failure to complete pre-operative requirements may result in postponement of the surgery.</p>
 
               <p className="font-semibold mt-3 mb-1">3. Clinical Risk Assessments</p>
-              <p>All risk assessments (bleeding, DVT, nutritional, cardiovascular, pressure sore) documented in this booking form are preliminary. Final risk stratification will be confirmed by the surgical team on the day of surgery.</p>
+              <p>All risk assessments (Caprini DVT Score, MUST Nutritional Score, RCRI Cardiovascular Index, Waterlow Pressure Sore Score, Surgical Bleeding Risk Score) documented in this booking form are based on validated clinical tools. Final risk stratification will be confirmed by the surgical team on the day of surgery.</p>
 
               <p className="font-semibold mt-3 mb-1">4. Investigations</p>
               <p>All compulsory pre-operative investigations must be completed and results available before the scheduled surgery date. Additional investigations may be required based on clinical assessment.</p>
@@ -831,8 +1408,8 @@ export default function BookSurgery() {
               <p className="font-semibold mt-3 mb-1">8. Hospital Authority</p>
               <p>The hospital management and surgical team reserve the right to reschedule surgeries based on clinical priorities, modify surgical plans as medically necessary, and decline or postpone procedures if patient conditions are not optimal.</p>
 
-              <p className="font-semibold mt-3 mb-1">9. Patient Education</p>
-              <p>Patient education material provided through this platform is for informational purposes and does not replace direct medical consultation. Patients should discuss any concerns with their surgical team.</p>
+              <p className="font-semibold mt-3 mb-1">9. Patient Education &amp; Nutritional Support</p>
+              <p>Patient education material and nutritional meal plans provided through this platform are for informational purposes and are based on validated guidelines (MUST, West African Food Composition Table). They do not replace direct medical or dietetic consultation.</p>
 
               <div className="mt-4 pt-3 border-t border-gray-300 text-center">
                 <p className="font-semibold text-blue-800">Niger Foundation Hospital, Enugu</p>

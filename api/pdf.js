@@ -220,13 +220,19 @@ async function generateSurgeryBookingPDF(surg) {
 
   // ── Section 2: Pre-Operative Planning ──
   const plan = surg.pre_op_planning || {};
-  drawSectionHeader('2. PRE-OPERATIVE PLANNING', purple);
+  drawSectionHeader('2. PRE-OPERATIVE PLANNING (Validated Scoring Tools)', purple);
   drawField('Diagnosis', plan.diagnosis || surg.diagnosis);
-  if (plan.bleeding_risk) drawField('Bleeding Risk', `${plan.bleeding_risk.level || 'Not assessed'}${plan.bleeding_risk.notes ? ' – ' + plan.bleeding_risk.notes : ''}`);
-  if (plan.dvt_risk) drawField('DVT Risk', `${plan.dvt_risk.level || 'Not assessed'}${plan.dvt_risk.notes ? ' – ' + plan.dvt_risk.notes : ''}`);
-  if (plan.nutritional_assessment) drawField('Nutritional Status', `${plan.nutritional_assessment.status || 'Not assessed'}${plan.nutritional_assessment.notes ? ' – ' + plan.nutritional_assessment.notes : ''}`);
-  if (plan.cardiovascular_risk) drawField('Cardiovascular Risk', `${plan.cardiovascular_risk.level || 'Not assessed'}${plan.cardiovascular_risk.notes ? ' – ' + plan.cardiovascular_risk.notes : ''}`);
-  if (plan.pressure_sore_risk) drawField('Pressure Sore Risk', `${plan.pressure_sore_risk.level || 'Not assessed'}${plan.pressure_sore_risk.notes ? ' – ' + plan.pressure_sore_risk.notes : ''}`);
+  if (plan.bleeding_risk) drawField('Bleeding Risk', `${plan.bleeding_risk.tool || 'Surgical Bleeding Risk'} — Score: ${plan.bleeding_risk.score ?? 'N/A'} — ${plan.bleeding_risk.level || 'Not assessed'}${plan.bleeding_risk.notes ? ' — Notes: ' + plan.bleeding_risk.notes : ''}`);
+  if (plan.dvt_risk) drawField('DVT Risk', `${plan.dvt_risk.tool || 'Caprini Score'} — Score: ${plan.dvt_risk.score ?? 'N/A'} — ${plan.dvt_risk.level || 'Not assessed'}`);
+  if (plan.nutritional_assessment) drawField('Nutritional', `${plan.nutritional_assessment.tool || 'MUST'} — Score: ${plan.nutritional_assessment.score ?? 'N/A'} — ${plan.nutritional_assessment.level || plan.nutritional_assessment.status || 'Not assessed'}`);
+  if (plan.cardiovascular_risk) drawField('Cardiovascular', `${plan.cardiovascular_risk.tool || 'RCRI'} — Score: ${plan.cardiovascular_risk.score ?? 'N/A'} — ${plan.cardiovascular_risk.level || 'Not assessed'}`);
+  if (plan.pressure_sore_risk) drawField('Pressure Sore', `${plan.pressure_sore_risk.tool || 'Waterlow Score'} — Score: ${plan.pressure_sore_risk.score ?? 'N/A'} — ${plan.pressure_sore_risk.level || 'Not assessed'}`);
+  // Meal plan note in PDF
+  if (plan.nutritional_assessment?.meal_plan) {
+    checkNewPage(14);
+    page.drawText('7-Day Meal Plan: Generated (see details below)', { x: margin + 5, y, size: 8, font, color: rgb(0.6, 0.4, 0) });
+    y -= 14;
+  }
   y -= 5;
 
   // ── Section 3: Pre-Operative Investigations ──
@@ -312,6 +318,57 @@ async function generateSurgeryBookingPDF(surg) {
       page.drawText('Post-Operative Education:', { x: margin + 5, y, size: 9, font: fontBold, color: darkGray });
       y -= 14;
       drawWrappedText(surg.post_op_education, 10);
+    }
+  }
+
+  // ── Section 9: 7-Day Meal Plan (if generated) ──
+  if (plan.nutritional_assessment?.meal_plan) {
+    const mp = plan.nutritional_assessment.meal_plan;
+    drawSectionHeader('9. 7-DAY MEAL PLAN (SE Nigeria)', rgb(0.6, 0.4, 0));
+    drawField('Calorie Target', `~${mp.calorie_target} kcal/day`);
+    drawField('Protein Target', mp.protein_target);
+    if (mp.enrichment_note) {
+      checkNewPage(14);
+      drawWrappedText(mp.enrichment_note, 5);
+      y -= 4;
+    }
+    if (mp.days && mp.days.length > 0) {
+      for (const day of mp.days) {
+        checkNewPage(80);
+        page.drawText(day.day, { x: margin + 5, y, size: 9, font: fontBold, color: rgb(0.5, 0.3, 0) });
+        y -= 13;
+        const meals = [
+          { label: 'Breakfast', data: day.breakfast },
+          { label: 'Mid-Morning', data: day.mid_morning },
+          { label: 'Lunch', data: day.lunch },
+          { label: 'Afternoon', data: day.afternoon },
+          { label: 'Dinner', data: day.dinner },
+          { label: 'Bedtime', data: day.bedtime },
+        ];
+        for (const m of meals) {
+          if (m.data) {
+            checkNewPage(14);
+            page.drawText(`  ${m.label}: ${m.data.meal} (${m.data.calories} kcal, ${m.data.protein})`, { x: margin + 10, y, size: 7.5, font, color: darkGray });
+            y -= 11;
+          }
+        }
+        y -= 4;
+      }
+    }
+    if (mp.supplements && mp.supplements.length > 0) {
+      checkNewPage(20);
+      page.drawText('Recommended Supplements:', { x: margin + 5, y, size: 9, font: fontBold, color: rgb(0.2, 0.4, 0.6) });
+      y -= 13;
+      for (const s of mp.supplements) {
+        checkNewPage(12);
+        page.drawText(`  • ${s}`, { x: margin + 10, y, size: 7.5, font, color: darkGray });
+        y -= 11;
+      }
+    }
+    if (mp.notes) {
+      checkNewPage(20);
+      y -= 4;
+      drawWrappedText(mp.notes, 5);
     }
   }
 

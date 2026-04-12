@@ -108,6 +108,13 @@ export const api = {
       body: JSON.stringify({ procedure_name: procedureName, diagnosis }),
     }),
 
+  // Meal plan generation (MUST-based, SE Nigeria)
+  generateMealPlan: (data) =>
+    request('/generate-meal-plan', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Surgery PDF
   getSurgeryPdf: async (id) => {
     const result = await request(`/admin/surgery-pdf/${id}`)

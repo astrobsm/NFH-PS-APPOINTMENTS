@@ -620,6 +620,18 @@ app.post('/api/surgery-education', async (req, res) => {
   }
 });
 
+// ── POST /api/generate-meal-plan ── (7-day SE Nigeria meal plan based on MUST score)
+app.post('/api/generate-meal-plan', async (req, res) => {
+  try {
+    const { must_score, must_risk, age, gender, diagnosis } = req.body;
+    const mealPlan = generateSENigeriaMealPlan(must_score, must_risk, age, gender, diagnosis);
+    res.json({ meal_plan: mealPlan });
+  } catch (e) {
+    console.error('generate-meal-plan error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // ── GET /api/admin/surgery-pdf/:id ── (generate surgery booking PDF)
 app.get('/api/admin/surgery-pdf/:id', requireAdmin, async (req, res) => {
   try {
@@ -1061,6 +1073,110 @@ function formatDateISO(d) {
     return d.toISOString().split('T')[0];
   }
   return String(d).slice(0, 10);
+}
+
+// ── 7-Day SE Nigeria Meal Plan Generator (based on MUST score & West African Food Composition Table) ──
+function generateSENigeriaMealPlan(mustScore, mustRisk, age, gender, diagnosis) {
+  const isHighRisk = mustScore >= 2;
+  const isMediumRisk = mustScore === 1;
+  const calorieTarget = isHighRisk ? 2500 : isMediumRisk ? 2200 : 2000;
+  const proteinTarget = isHighRisk ? '1.2–1.5 g/kg/day' : '1.0–1.2 g/kg/day';
+
+  // High-calorie enrichment notes for at-risk patients
+  const enrichNote = isHighRisk
+    ? 'Add extra palm oil, groundnut paste, or powdered milk to meals to increase calorie density.'
+    : isMediumRisk
+    ? 'Consider adding an extra snack or increasing portion sizes if appetite allows.'
+    : '';
+
+  const days = [
+    {
+      day: 'Day 1 (Monday)',
+      breakfast: { meal: 'Akamu (fermented corn pap) with milk & sugar + 3 Akara balls (bean cakes)', calories: isHighRisk ? 550 : 420, protein: '16g', notes: 'Rich in B-vitamins from fermented maize; beans provide plant protein & iron' },
+      mid_morning: { meal: 'Ripe banana (2) + roasted groundnuts (1 handful)', calories: 280, protein: '8g', notes: 'Banana: potassium & energy; groundnuts: 567 kcal/100g, 25.8g protein/100g (WAFCT)' },
+      lunch: { meal: 'Pounded Yam with Egusi Soup (ugu leaves, stockfish, crayfish, palm oil)', calories: isHighRisk ? 750 : 620, protein: '28g', notes: 'Egusi (melon seed): 598 kcal/100g, 30g protein/100g; Ugu: rich in iron & vitamin C' },
+      afternoon: { meal: 'Garden egg (3) with groundnut paste', calories: 180, protein: '6g', notes: 'Garden egg: 25 kcal/100g, good source of dietary fibre' },
+      dinner: { meal: 'Boiled plantain with fish pepper soup (catfish)', calories: isHighRisk ? 580 : 480, protein: '30g', notes: 'Plantain: 122 kcal/100g; catfish: high-quality protein & omega-3' },
+      bedtime: { meal: 'Cup of warm milk with honey', calories: 150, protein: '8g', notes: 'Provides calcium and easy-to-digest protein before sleep' },
+    },
+    {
+      day: 'Day 2 (Tuesday)',
+      breakfast: { meal: 'Boiled yam + egg sauce (2 eggs, tomatoes, onion, palm oil)', calories: isHighRisk ? 580 : 460, protein: '18g', notes: 'Yam: 118 kcal/100g; eggs provide complete protein & vitamin D' },
+      mid_morning: { meal: 'Sliced pawpaw (papaya) + chin chin (small portion)', calories: 220, protein: '3g', notes: 'Pawpaw: vitamin A & C, aids digestion (papain enzyme)' },
+      lunch: { meal: 'Jollof rice with grilled chicken + fried plantain + vegetable salad', calories: isHighRisk ? 780 : 650, protein: '32g', notes: 'Balanced meal; tomato-based rice provides lycopene; chicken is lean protein' },
+      afternoon: { meal: 'Ukwa (breadfruit) porridge — small bowl', calories: 250, protein: '8g', notes: 'Breadfruit (Treculia africana): traditional Igbo protein-rich snack' },
+      dinner: { meal: 'Semovita with Oha Soup (oha leaves, cocoyam thickener, beef, stockfish)', calories: isHighRisk ? 620 : 520, protein: '25g', notes: 'Oha leaf: rich in amino acids, iron, and calcium' },
+      bedtime: { meal: 'Moi-moi (steamed bean pudding) — 1 wrap', calories: 200, protein: '12g', notes: 'Moi-moi: complete plant protein from black-eyed beans' },
+    },
+    {
+      day: 'Day 3 (Wednesday)',
+      breakfast: { meal: 'Bread (2 slices) with scrambled eggs (2) + tea with milk', calories: isHighRisk ? 520 : 420, protein: '16g', notes: 'Quick protein-rich breakfast; add butter for extra calories if needed' },
+      mid_morning: { meal: 'Orange (2) + cashew nuts (handful)', calories: 260, protein: '6g', notes: 'Orange: vitamin C aids iron absorption & wound healing' },
+      lunch: { meal: 'White rice with nsala soup (white soup — utazi, catfish, yam pieces)', calories: isHighRisk ? 720 : 600, protein: '30g', notes: 'Nsala: light soup traditionally used for recuperating patients in Igbo culture' },
+      afternoon: { meal: 'Roasted corn + African pear (ube)', calories: 240, protein: '5g', notes: 'Seasonal SE Nigeria pairing; ube: healthy fats similar to avocado' },
+      dinner: { meal: 'Yam porridge (yam, palm oil, crayfish, ugu, smoked fish)', calories: isHighRisk ? 600 : 500, protein: '22g', notes: 'One-pot meal rich in carbohydrates, protein, and micronutrients' },
+      bedtime: { meal: 'Ripe banana (1) + cup of warm pap', calories: 180, protein: '4g' },
+    },
+    {
+      day: 'Day 4 (Thursday)',
+      breakfast: { meal: 'Moi-moi (2 wraps) + custard with milk', calories: isHighRisk ? 600 : 480, protein: '20g', notes: 'High-protein breakfast; custard adds calories and B-vitamins' },
+      mid_morning: { meal: 'Udara (African star apple) (3) + groundnuts', calories: 240, protein: '7g', notes: 'Udara: vitamin C, antioxidants; seasonal SE Nigeria fruit' },
+      lunch: { meal: 'Garri (eba) with bitter leaf soup (onugbu, stockfish, assorted meat, cocoyam paste)', calories: isHighRisk ? 750 : 630, protein: '30g', notes: 'Bitter leaf: hepatoprotective, aids digestion; garri: 360 kcal/100g' },
+      afternoon: { meal: 'Coconut pieces + small portion of chin chin', calories: 230, protein: '4g', notes: 'Coconut: healthy saturated fats, MCTs for quick energy' },
+      dinner: { meal: 'Beans porridge with plantain + palm oil', calories: isHighRisk ? 620 : 520, protein: '22g', notes: 'Black-eyed beans: 343 kcal/100g, 23g protein/100g; excellent iron source' },
+      bedtime: { meal: 'Cup of warm milk with Milo', calories: 170, protein: '8g' },
+    },
+    {
+      day: 'Day 5 (Friday)',
+      breakfast: { meal: 'Indomie noodles with eggs (2) + vegetables', calories: isHighRisk ? 560 : 450, protein: '18g', notes: 'Add vegetables (carrots, green beans) for micronutrients' },
+      mid_morning: { meal: 'Watermelon slices + tiger nuts (achicha)', calories: 220, protein: '5g', notes: 'Tiger nuts: traditional Igbo snack, rich in fibre and healthy fats' },
+      lunch: { meal: 'Fufu with ogbono soup (ogbono seeds, ugu leaves, smoked fish, crayfish, palm oil)', calories: isHighRisk ? 740 : 610, protein: '26g', notes: 'Ogbono (bush mango seed): 670 kcal/100g, iron & healthy fats' },
+      afternoon: { meal: 'Akara (bean cakes) — 3 pieces', calories: 250, protein: '12g', notes: 'Deep-fried black-eyed bean paste; protein-dense snack' },
+      dinner: { meal: 'Fried rice with grilled tilapia + coleslaw', calories: isHighRisk ? 650 : 540, protein: '32g', notes: 'Tilapia: lean protein; coleslaw adds vitamins and fibre' },
+      bedtime: { meal: 'Agidi (corn starch gel) with milk + sugar', calories: 160, protein: '4g' },
+    },
+    {
+      day: 'Day 6 (Saturday)',
+      breakfast: { meal: 'Abacha (African salad) with ugba (oil bean), garden egg, palm oil, crayfish', calories: isHighRisk ? 520 : 420, protein: '14g', notes: 'Traditional Igbo cassava-based salad; ugba: fermented African oil bean, rich in protein' },
+      mid_morning: { meal: 'Mango (1 large) + boiled groundnuts', calories: 300, protein: '10g', notes: 'Mango: vitamin A & C; boiled groundnuts: softer and easier to digest' },
+      lunch: { meal: 'Rice and stew (tomato, beef) + steamed ugu leaves (vegetable)', calories: isHighRisk ? 730 : 600, protein: '28g', notes: 'Palm-oil-free stew option; ugu side dish adds iron and folic acid' },
+      afternoon: { meal: 'Sweet potato (roasted) — 1 medium', calories: 200, protein: '3g', notes: 'Sweet potato: 86 kcal/100g, excellent source of vitamin A (beta-carotene)' },
+      dinner: { meal: 'Wheat meal (semovita) with okra soup (okra, palm oil, crayfish, goat meat)', calories: isHighRisk ? 640 : 530, protein: '26g', notes: 'Okra: soluble fibre (mucilage) aids digestion; good source of vitamin K' },
+      bedtime: { meal: 'Zobo (hibiscus) drink + 2 digestive biscuits', calories: 140, protein: '2g', notes: 'Zobo: antioxidant-rich (use minimal sugar)' },
+    },
+    {
+      day: 'Day 7 (Sunday)',
+      breakfast: { meal: 'Pancakes (3) with honey + sliced banana + tea', calories: isHighRisk ? 540 : 430, protein: '10g', notes: 'Add groundnut butter for extra protein if nutritional risk is high' },
+      mid_morning: { meal: 'Avocado (½) on toast + boiled egg', calories: 300, protein: '10g', notes: 'Avocado: healthy monounsaturated fats, potassium, folate' },
+      lunch: { meal: 'Pounded yam with Egusi or Ogbono soup (assorted meat, fish, ugu, waterleaf)', calories: isHighRisk ? 780 : 650, protein: '32g', notes: 'Traditional Sunday meal; waterleaf adds vitamins A, C and iron' },
+      afternoon: { meal: 'Coconut rice — small bowl', calories: 280, protein: '5g', notes: 'Coconut milk adds healthy fats and calories' },
+      dinner: { meal: 'Boiled yam + fish stew (mackerel or titus) + steamed vegetables', calories: isHighRisk ? 580 : 480, protein: '28g', notes: 'Mackerel: omega-3 fatty acids for anti-inflammatory benefits' },
+      bedtime: { meal: 'Cup of warm pap (akamu) with milk + groundnut', calories: 200, protein: '8g' },
+    },
+  ];
+
+  const supplements = [];
+  if (isHighRisk) {
+    supplements.push('Oral Nutritional Supplements (ONS) — e.g. Ensure/Complan 2× daily between meals');
+    supplements.push('Iron supplement (if anaemia present) — Ferrous sulphate 200mg BD');
+    supplements.push('Folic acid 5mg daily');
+    supplements.push('Vitamin C 500mg daily (aids wound healing & iron absorption)');
+    supplements.push('Zinc 20mg daily (supports wound healing)');
+    supplements.push('Vitamin D 1000 IU daily (if deficient)');
+  } else if (isMediumRisk) {
+    supplements.push('Multivitamin tablet daily');
+    supplements.push('Vitamin C 250mg daily');
+    supplements.push('Consider oral nutritional supplement if intake remains poor after 3 days');
+  }
+
+  return {
+    calorie_target: calorieTarget,
+    protein_target: proteinTarget,
+    enrichment_note: enrichNote,
+    days,
+    supplements,
+    notes: `Meal plan designed using the Food Composition Table for West Africa (FAO/WAFCT, 2019) and adapted for foods commonly consumed in South-East Nigeria (Igbo cuisine). Portion sizes adjusted for ${mustRisk || 'assessed'} nutritional risk. ${isHighRisk ? 'HIGH-RISK: Fortify all meals — add extra palm oil, groundnut paste, powdered milk, or eggs where possible. Consider referral to hospital dietitian.' : ''} All nutritional values are approximate. This plan complements but does not replace direct dietetic consultation.`,
+  };
 }
 
 // ── Local dev server ──
