@@ -221,6 +221,14 @@ export default function BookSurgery() {
   const [educationPdfLoading, setEducationPdfLoading] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
   const [expandedPanel, setExpandedPanel] = useState(null)
+
+  // Auth check — admin only
+  useEffect(() => {
+    const token = localStorage.getItem('admin_token')
+    if (!token) {
+      navigate('/admin', { replace: true })
+    }
+  }, [navigate])
   const [mealPlan, setMealPlan] = useState(null)
   const [mealPlanLoading, setMealPlanLoading] = useState(false)
   const [showMealPlan, setShowMealPlan] = useState(false)

@@ -2,7 +2,10 @@ import { Link, useLocation } from 'react-router-dom'
 
 export default function Header() {
   const location = useLocation()
-  const isAdmin = location.pathname.startsWith('/admin')
+  const isAdmin = !!localStorage.getItem('admin_token')
+  const isAdminSection = location.pathname.startsWith('/admin') ||
+    location.pathname === '/book-surgery' ||
+    location.pathname === '/book-ward-round'
 
   return (
     <header className="bg-blue-800 text-white shadow-lg">
@@ -15,7 +18,7 @@ export default function Header() {
           </div>
         </Link>
         <nav className="flex items-center gap-4 text-sm">
-          {isAdmin ? (
+          {isAdmin && isAdminSection ? (
             <>
               <Link to="/admin/dashboard" className="hover:text-blue-200 transition">Appointments</Link>
               <Link to="/admin/surgeries" className="hover:text-blue-200 transition">Surgeries</Link>
