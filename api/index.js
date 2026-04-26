@@ -448,51 +448,100 @@ app.post('/api/admin/schedule-print', requireAdmin, async (req, res) => {
   }
 });
 
-// ── POST /api/surgeries ── (public: patient books a surgery)
+// ── Helper: insert a surgery booking (shared by admin + public POST routes) ──
+async function insertSurgeryBooking(body) {
+  const {
+    full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes,
+    procedure_name, pre_op_planning, investigations, requirements, readiness_checklist,
+    pre_op_education, post_op_education,
+    specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start,
+    has_extra_assistant, urgency, equipment_needed, ward, is_daycase,
+  } = body;
+
+  if (!full_name || age === undefined || !gender || !preferred_date) {
+    const err = new Error('Missing required fields'); err.status = 400; throw err;
+  }
+  if (!surgery_type && !procedure_name) {
+    const err = new Error('Procedure name is required'); err.status = 400; throw err;
+  }
+
+  const d = new Date(preferred_date + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (d < today) {
+    const err = new Error('Cannot schedule surgery in the past'); err.status = 400; throw err;
+  }
+
+  // Theatre slot conflict check (only when slot info provided)
+  let slotStartISO = null;
+  let slotEndISO = null;
+  if (slot_start && slot_duration_hours && theatre) {
+    const startDt = new Date(slot_start);
+    if (isNaN(startDt.getTime())) {
+      const err = new Error('Invalid slot_start'); err.status = 400; throw err;
+    }
+    const endDt = new Date(startDt.getTime() + Number(slot_duration_hours) * 60 * 60 * 1000);
+    slotStartISO = startDt.toISOString();
+    slotEndISO = endDt.toISOString();
+
+    const conflict = await query(
+      `SELECT id FROM surgeries
+         WHERE theatre = $1
+           AND status IN ('pending', 'confirmed')
+           AND slot_start IS NOT NULL
+           AND slot_end   IS NOT NULL
+           AND slot_start < $3
+           AND slot_end   > $2
+         LIMIT 1`,
+      [theatre, slotStartISO, slotEndISO]
+    );
+    if (conflict.rows.length > 0) {
+      const err = new Error('Theatre slot conflicts with an existing booking');
+      err.status = 409; throw err;
+    }
+  }
+
+  const insertResult = await query(
+    `INSERT INTO surgeries (
+      full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes, status,
+      procedure_name, pre_op_planning, investigations, requirements, readiness_checklist,
+      pre_op_education, post_op_education,
+      specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start, slot_end,
+      has_extra_assistant, urgency, equipment_needed, ward, is_daycase
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13,$14,$15,
+               $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+     RETURNING *`,
+    [
+      full_name, parseInt(age), gender, phone_number || null,
+      surgery_type || procedure_name, diagnosis || null, preferred_date, notes || null,
+      procedure_name || surgery_type || null,
+      pre_op_planning ? JSON.stringify(pre_op_planning) : null,
+      investigations ? JSON.stringify(investigations) : null,
+      requirements ? JSON.stringify(requirements) : null,
+      readiness_checklist ? JSON.stringify(readiness_checklist) : null,
+      pre_op_education || null,
+      post_op_education || null,
+      specialty_id ? parseInt(specialty_id) : null,
+      surgeon_id ? parseInt(surgeon_id) : null,
+      theatre || null,
+      surgery_class || null,
+      slot_duration_hours ? parseInt(slot_duration_hours) : null,
+      slotStartISO,
+      slotEndISO,
+      has_extra_assistant === true || has_extra_assistant === 'true',
+      urgency || 'ELECTIVE',
+      equipment_needed || null,
+      ward || null,
+      is_daycase === true || is_daycase === 'true',
+    ]
+  );
+  return insertResult.rows[0];
+}
+
+// ── POST /api/surgeries ── (admin-flow: full pre-op booking)
 app.post('/api/surgeries', async (req, res) => {
   try {
-    const {
-      full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes,
-      procedure_name, pre_op_planning, investigations, requirements, readiness_checklist,
-      pre_op_education, post_op_education
-    } = req.body;
-
-    if (!full_name || age === undefined || !gender || !preferred_date) {
-      return res.status(400).json({ detail: 'Missing required fields' });
-    }
-    if (!surgery_type && !procedure_name) {
-      return res.status(400).json({ detail: 'Procedure name is required' });
-    }
-
-    // Validate not in the past
-    const d = new Date(preferred_date + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (d < today) {
-      return res.status(400).json({ detail: 'Cannot schedule surgery in the past' });
-    }
-
-    const insertResult = await query(
-      `INSERT INTO surgeries (
-        full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes, status,
-        procedure_name, pre_op_planning, investigations, requirements, readiness_checklist,
-        pre_op_education, post_op_education
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13,$14,$15)
-       RETURNING *`,
-      [
-        full_name, parseInt(age), gender, phone_number || null,
-        surgery_type || procedure_name, diagnosis || null, preferred_date, notes || null,
-        procedure_name || surgery_type || null,
-        pre_op_planning ? JSON.stringify(pre_op_planning) : null,
-        investigations ? JSON.stringify(investigations) : null,
-        requirements ? JSON.stringify(requirements) : null,
-        readiness_checklist ? JSON.stringify(readiness_checklist) : null,
-        pre_op_education || null,
-        post_op_education || null,
-      ]
-    );
-
-    const row = insertResult.rows[0];
+    const row = await insertSurgeryBooking(req.body);
     res.json({
       id: row.id,
       full_name: row.full_name,
@@ -511,9 +560,181 @@ app.post('/api/surgeries', async (req, res) => {
       readiness_checklist: row.readiness_checklist,
       pre_op_education: row.pre_op_education,
       post_op_education: row.post_op_education,
+      specialty_id: row.specialty_id,
+      surgeon_id: row.surgeon_id,
+      theatre: row.theatre,
+      surgery_class: row.surgery_class,
+      slot_duration_hours: row.slot_duration_hours,
+      slot_start: row.slot_start,
+      slot_end: row.slot_end,
+      has_extra_assistant: row.has_extra_assistant,
+      urgency: row.urgency,
+      equipment_needed: row.equipment_needed,
+      ward: row.ward,
+      is_daycase: row.is_daycase,
     });
   } catch (e) {
     console.error('surgery booking error:', e);
+    res.status(e.status || 500).json({ detail: e.message });
+  }
+});
+
+// ── POST /api/public/surgeries ── (no-login public theatre booking)
+app.post('/api/public/surgeries', async (req, res) => {
+  try {
+    const row = await insertSurgeryBooking(req.body);
+    res.json({
+      id: row.id,
+      preferred_date: formatDateISO(row.preferred_date),
+      slot_start: row.slot_start,
+      slot_end: row.slot_end,
+      theatre: row.theatre,
+      status: row.status,
+      message: 'Booking received and pending admin confirmation',
+    });
+  } catch (e) {
+    console.error('public surgery booking error:', e);
+    res.status(e.status || 500).json({ detail: e.message });
+  }
+});
+
+// ── GET /api/public/surgeries ── (no-login anonymized registry)
+app.get('/api/public/surgeries', async (req, res) => {
+  try {
+    const { from, to, status } = req.query;
+    const conds = [];
+    const params = [];
+    if (from) { params.push(from); conds.push(`preferred_date >= $${params.length}`); }
+    if (to)   { params.push(to);   conds.push(`preferred_date <= $${params.length}`); }
+    if (status) { params.push(status); conds.push(`status = $${params.length}`); }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
+    const result = await query(
+      `SELECT s.id, s.full_name, s.preferred_date, s.slot_start, s.slot_end,
+              s.theatre, s.surgery_class, s.urgency, s.status, s.is_daycase,
+              COALESCE(s.procedure_name, s.surgery_type) AS procedure_name,
+              sp.name AS specialty_name,
+              su.full_name AS surgeon_name
+         FROM surgeries s
+         LEFT JOIN specialties sp ON sp.id = s.specialty_id
+         LEFT JOIN surgeons   su ON su.id = s.surgeon_id
+         ${where}
+         ORDER BY s.preferred_date DESC, s.slot_start NULLS LAST, s.created_at DESC
+         LIMIT 200`,
+      params
+    );
+    // Anonymize: first name only
+    const anonymized = result.rows.map(r => {
+      const first = (r.full_name || '').split(' ')[0] || '';
+      return {
+        id: r.id,
+        patient_first_name: first,
+        procedure_name: r.procedure_name,
+        preferred_date: formatDateISO(r.preferred_date),
+        slot_start: r.slot_start,
+        slot_end: r.slot_end,
+        theatre: r.theatre,
+        surgery_class: r.surgery_class,
+        urgency: r.urgency,
+        status: r.status,
+        is_daycase: r.is_daycase,
+        specialty_name: r.specialty_name,
+        surgeon_name: r.surgeon_name,
+      };
+    });
+    res.json(anonymized);
+  } catch (e) {
+    console.error('public surgeries list error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── Specialties (public read, admin write) ──
+app.get('/api/specialties', async (req, res) => {
+  try {
+    const result = await query('SELECT id, name FROM specialties ORDER BY name');
+    res.json(result.rows);
+  } catch (e) {
+    console.error('list specialties error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+app.post('/api/admin/specialties', requireAdmin, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ detail: 'Name is required' });
+    }
+    const result = await query(
+      `INSERT INTO specialties (name) VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id, name`,
+      [String(name).trim()]
+    );
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('create specialty error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+app.delete('/api/admin/specialties/:id', requireAdmin, async (req, res) => {
+  try {
+    const result = await query('DELETE FROM specialties WHERE id = $1 RETURNING id', [parseInt(req.params.id)]);
+    if (result.rows.length === 0) return res.status(404).json({ detail: 'Specialty not found' });
+    res.json({ message: 'Specialty deleted' });
+  } catch (e) {
+    console.error('delete specialty error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+// ── Surgeons (public read, admin write) ──
+app.get('/api/surgeons', async (req, res) => {
+  try {
+    const { specialty_id } = req.query;
+    let result;
+    if (specialty_id) {
+      result = await query(
+        'SELECT id, full_name, specialty_id FROM surgeons WHERE specialty_id = $1 ORDER BY full_name',
+        [parseInt(specialty_id)]
+      );
+    } else {
+      result = await query('SELECT id, full_name, specialty_id FROM surgeons ORDER BY full_name');
+    }
+    res.json(result.rows);
+  } catch (e) {
+    console.error('list surgeons error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+app.post('/api/admin/surgeons', requireAdmin, async (req, res) => {
+  try {
+    const { full_name, specialty_id } = req.body;
+    if (!full_name || !specialty_id) {
+      return res.status(400).json({ detail: 'full_name and specialty_id are required' });
+    }
+    const result = await query(
+      `INSERT INTO surgeons (full_name, specialty_id) VALUES ($1, $2)
+         ON CONFLICT (full_name, specialty_id) DO UPDATE SET full_name = EXCLUDED.full_name
+         RETURNING id, full_name, specialty_id`,
+      [String(full_name).trim(), parseInt(specialty_id)]
+    );
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('create surgeon error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
+app.delete('/api/admin/surgeons/:id', requireAdmin, async (req, res) => {
+  try {
+    const result = await query('DELETE FROM surgeons WHERE id = $1 RETURNING id', [parseInt(req.params.id)]);
+    if (result.rows.length === 0) return res.status(404).json({ detail: 'Surgeon not found' });
+    res.json({ message: 'Surgeon deleted' });
+  } catch (e) {
+    console.error('delete surgeon error:', e);
     res.status(500).json({ detail: e.message });
   }
 });
@@ -525,11 +746,22 @@ app.get('/api/admin/surgeries', requireAdmin, async (req, res) => {
     let result;
     if (status) {
       result = await query(
-        'SELECT * FROM surgeries WHERE status = $1 ORDER BY preferred_date, created_at',
+        `SELECT s.*, sp.name AS specialty_name, su.full_name AS surgeon_full_name
+           FROM surgeries s
+           LEFT JOIN specialties sp ON sp.id = s.specialty_id
+           LEFT JOIN surgeons   su ON su.id = s.surgeon_id
+          WHERE s.status = $1
+          ORDER BY s.preferred_date, s.created_at`,
         [status]
       );
     } else {
-      result = await query('SELECT * FROM surgeries ORDER BY preferred_date, created_at');
+      result = await query(
+        `SELECT s.*, sp.name AS specialty_name, su.full_name AS surgeon_full_name
+           FROM surgeries s
+           LEFT JOIN specialties sp ON sp.id = s.specialty_id
+           LEFT JOIN surgeons   su ON su.id = s.surgeon_id
+          ORDER BY s.preferred_date, s.created_at`
+      );
     }
 
     const surgeries = result.rows.map(row => ({
@@ -541,7 +773,7 @@ app.get('/api/admin/surgeries', requireAdmin, async (req, res) => {
       surgery_type: row.surgery_type,
       diagnosis: row.diagnosis,
       preferred_date: formatDateISO(row.preferred_date),
-      surgeon_name: row.surgeon_name,
+      surgeon_name: row.surgeon_full_name || row.surgeon_name,
       notes: row.notes,
       status: row.status,
       created_at: row.created_at,
@@ -552,6 +784,19 @@ app.get('/api/admin/surgeries', requireAdmin, async (req, res) => {
       readiness_checklist: row.readiness_checklist,
       pre_op_education: row.pre_op_education,
       post_op_education: row.post_op_education,
+      specialty_id: row.specialty_id,
+      specialty_name: row.specialty_name,
+      surgeon_id: row.surgeon_id,
+      theatre: row.theatre,
+      surgery_class: row.surgery_class,
+      slot_duration_hours: row.slot_duration_hours,
+      slot_start: row.slot_start,
+      slot_end: row.slot_end,
+      has_extra_assistant: row.has_extra_assistant,
+      urgency: row.urgency,
+      equipment_needed: row.equipment_needed,
+      ward: row.ward,
+      is_daycase: row.is_daycase,
     }));
 
     res.json(surgeries);
@@ -565,7 +810,10 @@ app.get('/api/admin/surgeries', requireAdmin, async (req, res) => {
 app.put('/api/admin/surgeries/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, surgeon_name, preferred_date, notes } = req.body;
+    const {
+      status, surgeon_name, preferred_date, notes,
+      specialty_id, surgeon_id, theatre, surgery_class, ward, is_daycase, urgency,
+    } = req.body;
 
     const existing = await query('SELECT * FROM surgeries WHERE id = $1', [parseInt(id)]);
     if (existing.rows.length === 0) {
@@ -577,10 +825,23 @@ app.put('/api/admin/surgeries/:id', requireAdmin, async (req, res) => {
     const updatedSurgeon = surgeon_name !== undefined ? surgeon_name : current.surgeon_name;
     const updatedDate = preferred_date || formatDateISO(current.preferred_date);
     const updatedNotes = notes !== undefined ? notes : current.notes;
+    const updatedSpecialty = specialty_id !== undefined ? (specialty_id ? parseInt(specialty_id) : null) : current.specialty_id;
+    const updatedSurgeonId = surgeon_id !== undefined ? (surgeon_id ? parseInt(surgeon_id) : null) : current.surgeon_id;
+    const updatedTheatre = theatre !== undefined ? theatre : current.theatre;
+    const updatedClass = surgery_class !== undefined ? surgery_class : current.surgery_class;
+    const updatedWard = ward !== undefined ? ward : current.ward;
+    const updatedDaycase = is_daycase !== undefined ? (is_daycase === true || is_daycase === 'true') : current.is_daycase;
+    const updatedUrgency = urgency !== undefined ? urgency : current.urgency;
 
     await query(
-      `UPDATE surgeries SET status = $1, surgeon_name = $2, preferred_date = $3, notes = $4 WHERE id = $5`,
-      [updatedStatus, updatedSurgeon, updatedDate, updatedNotes, parseInt(id)]
+      `UPDATE surgeries
+          SET status = $1, surgeon_name = $2, preferred_date = $3, notes = $4,
+              specialty_id = $5, surgeon_id = $6, theatre = $7, surgery_class = $8,
+              ward = $9, is_daycase = $10, urgency = $11
+        WHERE id = $12`,
+      [updatedStatus, updatedSurgeon, updatedDate, updatedNotes,
+       updatedSpecialty, updatedSurgeonId, updatedTheatre, updatedClass,
+       updatedWard, updatedDaycase, updatedUrgency, parseInt(id)]
     );
 
     res.json({ message: 'Surgery booking updated' });

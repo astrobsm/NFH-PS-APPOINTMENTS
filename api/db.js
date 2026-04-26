@@ -111,6 +111,44 @@ async function initTables() {
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  // ── Theatre booking master data: specialties & surgeons ──
+  await query(`
+    CREATE TABLE IF NOT EXISTS specialties (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(150) NOT NULL UNIQUE,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS surgeons (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(150) NOT NULL,
+      specialty_id INTEGER NOT NULL REFERENCES specialties(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (full_name, specialty_id)
+    )
+  `);
+
+  // Extend surgeries with theatre-booking fields (idempotent)
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS specialty_id INTEGER REFERENCES specialties(id) ON DELETE SET NULL;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS surgeon_id INTEGER REFERENCES surgeons(id) ON DELETE SET NULL;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS theatre VARCHAR(20);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS surgery_class VARCHAR(20);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS slot_duration_hours INTEGER;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS slot_start TIMESTAMP;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS slot_end TIMESTAMP;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS has_extra_assistant BOOLEAN DEFAULT FALSE;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) DEFAULT 'ELECTIVE';
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS equipment_needed TEXT;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS ward VARCHAR(100);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS is_daycase BOOLEAN DEFAULT FALSE;
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
+  `);
 }
 
 module.exports = { pool, query, initTables };

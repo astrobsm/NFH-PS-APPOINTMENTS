@@ -14,6 +14,8 @@ import BookWardRound from './pages/BookWardRound'
 import WardRoundConfirmation from './pages/WardRoundConfirmation'
 import WardRoundDashboard from './pages/WardRoundDashboard'
 import QRCodePage from './pages/QRCodePage'
+import PublicTheatreRegistry from './pages/PublicTheatreRegistry'
+import PublicBookSurgery from './pages/PublicBookSurgery'
 
 export default function App() {
   return (
@@ -34,6 +36,9 @@ export default function App() {
         <Route path="/ward-round-confirmation" element={<WardRoundConfirmation />} />
         <Route path="/admin/ward-rounds" element={<WardRoundDashboard />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
+        {/* Public theatre booking & registry (no login) */}
+        <Route path="/theatre" element={<PublicTheatreRegistry />} />
+        <Route path="/theatre/book" element={<PublicBookSurgery />} />
       </Routes>
     </div>
   )

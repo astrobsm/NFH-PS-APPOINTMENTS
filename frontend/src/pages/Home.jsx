@@ -128,6 +128,18 @@ export default function Home() {
         >
           Book an Appointment
         </Link>
+        <Link
+          to="/theatre"
+          className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+        >
+          Public Theatre Registry
+        </Link>
+        <Link
+          to="/theatre/book"
+          className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+        >
+          Book a Surgery (Public)
+        </Link>
         {isAdmin && (
           <Link
             to="/book-surgery"

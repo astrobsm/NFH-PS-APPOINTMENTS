@@ -189,4 +189,26 @@ export const api = {
 
   setup: (data) =>
     request('/admin/settings/setup', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Specialties & Surgeons (master data) ──
+  getSpecialties: () => request('/specialties'),
+  createSpecialty: (name) =>
+    request('/admin/specialties', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteSpecialty: (id) =>
+    request(`/admin/specialties/${id}`, { method: 'DELETE' }),
+
+  getSurgeons: (specialtyId) =>
+    request(`/surgeons${specialtyId ? `?specialty_id=${specialtyId}` : ''}`),
+  createSurgeon: (full_name, specialty_id) =>
+    request('/admin/surgeons', { method: 'POST', body: JSON.stringify({ full_name, specialty_id }) }),
+  deleteSurgeon: (id) =>
+    request(`/admin/surgeons/${id}`, { method: 'DELETE' }),
+
+  // ── Public theatre registry (no login) ──
+  getPublicSurgeries: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/public/surgeries${qs ? `?${qs}` : ''}`)
+  },
+  bookPublicSurgery: (data) =>
+    request('/public/surgeries', { method: 'POST', body: JSON.stringify(data) }),
 }

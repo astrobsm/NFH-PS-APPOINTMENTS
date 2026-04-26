@@ -1,0 +1,295 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../utils/api'
+
+export default function PublicBookSurgery() {
+  const navigate = useNavigate()
+  const [specialties, setSpecialties] = useState([])
+  const [surgeons, setSurgeons] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(null)
+
+  const [form, setForm] = useState({
+    full_name: '',
+    age: '',
+    gender: '',
+    phone_number: '',
+    procedure_name: '',
+    diagnosis: '',
+    specialty_id: '',
+    surgeon_id: '',
+    theatre: '',
+    surgery_class: '',
+    slot_duration_hours: '',
+    slot_start: '',
+    preferred_date: '',
+    urgency: 'ELECTIVE',
+    has_extra_assistant: false,
+    equipment_needed: '',
+    ward: '',
+    is_daycase: false,
+    notes: '',
+  })
+
+  useEffect(() => {
+    api.getSpecialties().then(setSpecialties).catch(() => setSpecialties([]))
+  }, [])
+
+  useEffect(() => {
+    if (!form.specialty_id) { setSurgeons([]); return }
+    api.getSurgeons(form.specialty_id).then(setSurgeons).catch(() => setSurgeons([]))
+    setForm(f => ({ ...f, surgeon_id: '' }))
+  }, [form.specialty_id])
+
+  const change = (e) => {
+    const { name, value, type, checked } = e.target
+    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+    setError('')
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    const required = ['full_name', 'age', 'gender', 'procedure_name', 'preferred_date',
+      'specialty_id', 'surgeon_id', 'theatre', 'ward']
+    for (const k of required) {
+      if (!form[k]) { setError(`Please fill in: ${k.replace(/_/g, ' ')}`); return }
+    }
+
+    setLoading(true)
+    try {
+      const payload = {
+        ...form,
+        age: parseInt(form.age),
+        slot_duration_hours: form.slot_duration_hours ? parseInt(form.slot_duration_hours) : null,
+        specialty_id: form.specialty_id || null,
+        surgeon_id: form.surgeon_id || null,
+        slot_start: form.slot_start || null,
+        surgery_type: form.procedure_name,
+      }
+      const result = await api.bookPublicSurgery(payload)
+      setSuccess(result)
+    } catch (err) {
+      setError(err.message || 'Booking failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Booking Submitted</h1>
+          <p className="text-slate-600 mb-4">{success.message}</p>
+          <div className="bg-slate-50 rounded-lg p-4 text-sm text-left mb-6 space-y-1">
+            <div><strong>Reference:</strong> #{success.id}</div>
+            <div><strong>Date:</strong> {success.preferred_date}</div>
+            {success.theatre && <div><strong>Theatre:</strong> {success.theatre}</div>}
+            <div><strong>Status:</strong> <span className="text-amber-700">{success.status}</span></div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Link to="/theatre" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium">
+              View Public Registry
+            </Link>
+            <button onClick={() => { setSuccess(null); setForm(f => ({ ...f, full_name: '', phone_number: '', procedure_name: '', notes: '' })) }}
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">
+              Book Another
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Book a Surgery</h1>
+            <p className="text-sm text-slate-600 mt-1">Public booking — no login required. Subject to confirmation.</p>
+          </div>
+          <Link to="/theatre" className="text-sm text-amber-700 hover:underline">← Back to Registry</Link>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-sm">{error}</div>
+        )}
+
+        <form onSubmit={submit} className="space-y-6">
+          {/* Patient */}
+          <section className="bg-white rounded-xl shadow p-6">
+            <h2 className="font-semibold text-slate-800 mb-4">Patient Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+                <input name="full_name" value={form.full_name} onChange={change} required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                <input name="phone_number" value={form.phone_number} onChange={change} placeholder="0xxxxxxxxxx"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Age *</label>
+                <input type="number" min="0" name="age" value={form.age} onChange={change} required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Gender *</label>
+                <select name="gender" value={form.gender} onChange={change} required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                  <option value="">Select…</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Procedure */}
+          <section className="bg-white rounded-xl shadow p-6">
+            <h2 className="font-semibold text-slate-800 mb-4">Procedure</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Specialty *</label>
+                  <select name="specialty_id" value={form.specialty_id} onChange={change} required
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                    <option value="">Select specialty…</option>
+                    {specialties.map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Surgeon *</label>
+                  <select name="surgeon_id" value={form.surgeon_id} onChange={change} required disabled={!form.specialty_id}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white disabled:bg-slate-100">
+                    <option value="">{form.specialty_id ? 'Select surgeon…' : 'Pick a specialty first'}</option>
+                    {surgeons.map(su => <option key={su.id} value={su.id}>{su.full_name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Procedure Name *</label>
+                <input name="procedure_name" value={form.procedure_name} onChange={change} required
+                  placeholder="e.g. Inguinal hernia repair"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Diagnosis</label>
+                <input name="diagnosis" value={form.diagnosis} onChange={change}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+            </div>
+          </section>
+
+          {/* Scheduling */}
+          <section className="bg-white rounded-xl shadow p-6">
+            <h2 className="font-semibold text-slate-800 mb-4">Theatre & Schedule</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Theatre *</label>
+                  <select name="theatre" value={form.theatre} onChange={change} required
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                    <option value="">Select…</option>
+                    <option value="SMALL">Small Theatre</option>
+                    <option value="LARGE">Large Theatre</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Class</label>
+                  <select name="surgery_class" value={form.surgery_class} onChange={change}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                    <option value="">Select…</option>
+                    <option value="MINOR">Minor</option>
+                    <option value="INTERMEDIATE">Intermediate</option>
+                    <option value="MAJOR">Major</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Urgency</label>
+                  <select name="urgency" value={form.urgency} onChange={change}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                    <option value="ELECTIVE">Elective</option>
+                    <option value="URGENT">Urgent</option>
+                    <option value="EMERGENCY">Emergency</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Slot Duration</label>
+                  <select name="slot_duration_hours" value={form.slot_duration_hours} onChange={change}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                    <option value="">Select…</option>
+                    <option value="1">1 hour</option>
+                    <option value="2">2 hours</option>
+                    <option value="3">3 hours</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Slot Start</label>
+                  <input type="datetime-local" name="slot_start" value={form.slot_start} onChange={change}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Preferred Date *</label>
+                  <input type="date" name="preferred_date" min={today} value={form.preferred_date} onChange={change} required
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ward / Unit *</label>
+                  <input name="ward" value={form.ward} onChange={change} required
+                    placeholder="e.g. Surgical Ward A, Day-Case Unit"
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                </div>
+                <div className="flex items-center gap-6 pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_daycase" checked={!!form.is_daycase} onChange={change}
+                      className="w-5 h-5 text-amber-600 border-slate-300 rounded" />
+                    <span className="text-sm font-medium text-slate-700">Day-case</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="has_extra_assistant" checked={!!form.has_extra_assistant} onChange={change}
+                      className="w-5 h-5 text-amber-600 border-slate-300 rounded" />
+                    <span className="text-sm font-medium text-slate-700">Extra assistant</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Equipment Needed</label>
+                <input name="equipment_needed" value={form.equipment_needed} onChange={change}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                <textarea name="notes" rows={3} value={form.notes} onChange={change}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+            </div>
+          </section>
+
+          <button type="submit" disabled={loading}
+            className="w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 font-semibold shadow">
+            {loading ? 'Submitting…' : 'Submit Booking Request'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}

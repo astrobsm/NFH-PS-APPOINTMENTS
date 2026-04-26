@@ -222,6 +222,10 @@ export default function BookSurgery() {
   const [draftSaved, setDraftSaved] = useState(false)
   const [expandedPanel, setExpandedPanel] = useState(null)
 
+  // Specialties / Surgeons (master data)
+  const [specialties, setSpecialties] = useState([])
+  const [surgeons, setSurgeons] = useState([])
+
   // Auth check — admin only
   useEffect(() => {
     const token = localStorage.getItem('admin_token')
@@ -229,6 +233,11 @@ export default function BookSurgery() {
       navigate('/admin', { replace: true })
     }
   }, [navigate])
+
+  // Load specialties on mount
+  useEffect(() => {
+    api.getSpecialties().then(setSpecialties).catch(() => setSpecialties([]))
+  }, [])
   const [mealPlan, setMealPlan] = useState(null)
   const [mealPlanLoading, setMealPlanLoading] = useState(false)
   const [showMealPlan, setShowMealPlan] = useState(false)
@@ -285,6 +294,18 @@ export default function BookSurgery() {
     // Date
     preferred_date: '',
     notes: '',
+    // Theatre / scheduling
+    specialty_id: '',
+    surgeon_id: '',
+    theatre: '',
+    surgery_class: '',
+    slot_duration_hours: '',
+    slot_start: '',
+    has_extra_assistant: false,
+    urgency: 'ELECTIVE',
+    equipment_needed: '',
+    ward: '',
+    is_daycase: false,
     // Readiness
     readiness: {},
     // Education
@@ -454,6 +475,16 @@ export default function BookSurgery() {
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
     setError('')
   }
+
+  // Load surgeons when specialty changes
+  useEffect(() => {
+    if (!form.specialty_id) { setSurgeons([]); return }
+    api.getSurgeons(form.specialty_id)
+      .then(setSurgeons)
+      .catch(() => setSurgeons([]))
+    // Reset surgeon when specialty changes
+    setForm(f => ({ ...f, surgeon_id: '' }))
+  }, [form.specialty_id])
 
   const toggleCompulsoryTest = (key) => {
     setForm(f => ({
@@ -632,6 +663,22 @@ export default function BookSurgery() {
       setError('Please select a surgery date')
       return
     }
+    if (!form.specialty_id) {
+      setError('Please select a specialty')
+      return
+    }
+    if (!form.surgeon_id) {
+      setError('Please select a surgeon')
+      return
+    }
+    if (!form.theatre) {
+      setError('Please select a theatre')
+      return
+    }
+    if (!form.ward) {
+      setError('Please select the ward / unit')
+      return
+    }
     if (!acceptedTerms) {
       setError('Please read and accept the Terms and Conditions')
       return
@@ -714,6 +761,18 @@ export default function BookSurgery() {
         readiness_checklist: form.readiness,
         pre_op_education: form.pre_op_education,
         post_op_education: form.post_op_education,
+        // Theatre fields
+        specialty_id: form.specialty_id || null,
+        surgeon_id: form.surgeon_id || null,
+        theatre: form.theatre || null,
+        surgery_class: form.surgery_class || null,
+        slot_duration_hours: form.slot_duration_hours ? parseInt(form.slot_duration_hours) : null,
+        slot_start: form.slot_start || null,
+        has_extra_assistant: !!form.has_extra_assistant,
+        urgency: form.urgency || 'ELECTIVE',
+        equipment_needed: form.equipment_needed || null,
+        ward: form.ward || null,
+        is_daycase: !!form.is_daycase,
       }
       const result = await api.bookSurgery(data)
       clearDraft()
@@ -1389,14 +1448,117 @@ export default function BookSurgery() {
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-7 h-7 bg-amber-600 text-white rounded-full flex items-center justify-center text-xs font-bold">6</span>
-            Date for Surgery
+            Date, Theatre & Team
           </h2>
           <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Specialty *</label>
+                <select name="specialty_id" value={form.specialty_id} onChange={handleChange} required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                  <option value="">Select specialty…</option>
+                  {specialties.map(sp => (
+                    <option key={sp.id} value={sp.id}>{sp.name}</option>
+                  ))}
+                </select>
+                {specialties.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">No specialties yet — add them in Admin Settings.</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Surgeon *</label>
+                <select name="surgeon_id" value={form.surgeon_id} onChange={handleChange} required disabled={!form.specialty_id}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-gray-100">
+                  <option value="">{form.specialty_id ? 'Select surgeon…' : 'Pick a specialty first'}</option>
+                  {surgeons.map(su => (
+                    <option key={su.id} value={su.id}>{su.full_name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Theatre *</label>
+                <select name="theatre" value={form.theatre} onChange={handleChange} required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                  <option value="">Select theatre…</option>
+                  <option value="SMALL">Small Theatre</option>
+                  <option value="LARGE">Large Theatre</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Surgery Class</label>
+                <select name="surgery_class" value={form.surgery_class} onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                  <option value="">Select class…</option>
+                  <option value="MINOR">Minor</option>
+                  <option value="INTERMEDIATE">Intermediate</option>
+                  <option value="MAJOR">Major</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+                <select name="urgency" value={form.urgency} onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                  <option value="ELECTIVE">Elective</option>
+                  <option value="URGENT">Urgent</option>
+                  <option value="EMERGENCY">Emergency</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slot Duration (hours)</label>
+                <select name="slot_duration_hours" value={form.slot_duration_hours} onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
+                  <option value="">Select…</option>
+                  <option value="1">1 hour</option>
+                  <option value="2">2 hours</option>
+                  <option value="3">3 hours</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slot Start (date & time)</label>
+                <input type="datetime-local" name="slot_start" value={form.slot_start} onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Surgery Date *</label>
+                <input type="date" name="preferred_date" value={form.preferred_date} min={today} onChange={handleChange} required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ward / Unit *</label>
+                <input type="text" name="ward" value={form.ward} onChange={handleChange} required
+                  placeholder="e.g. Surgical Ward A, Day-Case Unit"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
+              </div>
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="is_daycase" checked={!!form.is_daycase} onChange={handleChange}
+                    className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                  <span className="text-sm font-medium text-gray-700">Day-case surgery</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="has_extra_assistant" checked={!!form.has_extra_assistant} onChange={handleChange}
+                    className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
+                  <span className="text-sm font-medium text-gray-700">Extra assistant required</span>
+                </label>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Surgery Date *</label>
-              <input type="date" name="preferred_date" value={form.preferred_date} min={today} onChange={handleChange} required
+              <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Needed <span className="text-gray-400">(Optional)</span></label>
+              <input type="text" name="equipment_needed" value={form.equipment_needed} onChange={handleChange}
+                placeholder="e.g. C-arm, Microscope, Image intensifier"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes <span className="text-gray-400">(Optional)</span></label>
               <textarea name="notes" value={form.notes} onChange={handleChange} rows={2}

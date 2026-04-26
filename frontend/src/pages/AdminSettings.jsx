@@ -13,6 +13,59 @@ export default function AdminSettings() {
   const [success, setSuccess] = useState('')
   const [newPassword, setNewPassword] = useState('')
 
+  // Master data: specialties & surgeons
+  const [specialties, setSpecialties] = useState([])
+  const [surgeons, setSurgeons] = useState([])
+  const [newSpecialty, setNewSpecialty] = useState('')
+  const [newSurgeon, setNewSurgeon] = useState({ full_name: '', specialty_id: '' })
+  const [mdError, setMdError] = useState('')
+
+  const loadMasterData = async () => {
+    try {
+      const [sp, su] = await Promise.all([api.getSpecialties(), api.getSurgeons()])
+      setSpecialties(sp || [])
+      setSurgeons(su || [])
+    } catch (e) {
+      setMdError(e.message || 'Failed to load master data')
+    }
+  }
+
+  useEffect(() => { loadMasterData() }, [])
+
+  const addSpecialty = async () => {
+    setMdError('')
+    if (!newSpecialty.trim()) { setMdError('Specialty name required'); return }
+    try {
+      await api.createSpecialty(newSpecialty.trim())
+      setNewSpecialty('')
+      loadMasterData()
+    } catch (e) { setMdError(e.message) }
+  }
+
+  const removeSpecialty = async (id) => {
+    if (!window.confirm('Delete this specialty? All linked surgeons will also be removed.')) return
+    try { await api.deleteSpecialty(id); loadMasterData() }
+    catch (e) { setMdError(e.message) }
+  }
+
+  const addSurgeon = async () => {
+    setMdError('')
+    if (!newSurgeon.full_name.trim() || !newSurgeon.specialty_id) {
+      setMdError('Surgeon name and specialty are required'); return
+    }
+    try {
+      await api.createSurgeon(newSurgeon.full_name.trim(), parseInt(newSurgeon.specialty_id))
+      setNewSurgeon({ full_name: '', specialty_id: '' })
+      loadMasterData()
+    } catch (e) { setMdError(e.message) }
+  }
+
+  const removeSurgeon = async (id) => {
+    if (!window.confirm('Delete this surgeon?')) return
+    try { await api.deleteSurgeon(id); loadMasterData() }
+    catch (e) { setMdError(e.message) }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('admin_token')
     if (!token) {
@@ -177,6 +230,81 @@ export default function AdminSettings() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Specialties & Surgeons */}
+      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h2 className="font-semibold text-gray-800 mb-4">Specialties & Surgeons</h2>
+        {mdError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-3 text-sm">{mdError}</div>
+        )}
+
+        {/* Specialties */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Specialties</h3>
+          <div className="flex gap-2 mb-3">
+            <input type="text" value={newSpecialty} onChange={(e) => setNewSpecialty(e.target.value)}
+              placeholder="e.g. Orthopaedics"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2" />
+            <button onClick={addSpecialty} type="button"
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium">
+              Add
+            </button>
+          </div>
+          {specialties.length === 0 ? (
+            <p className="text-xs text-gray-500">No specialties yet.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
+              {specialties.map(sp => (
+                <li key={sp.id} className="flex items-center justify-between px-3 py-2">
+                  <span className="text-sm text-gray-800">{sp.name}</span>
+                  <button onClick={() => removeSpecialty(sp.id)} type="button"
+                    className="text-xs text-red-600 hover:underline">Delete</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Surgeons */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Surgeons</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+            <input type="text" value={newSurgeon.full_name}
+              onChange={(e) => setNewSurgeon({ ...newSurgeon, full_name: e.target.value })}
+              placeholder="Surgeon full name"
+              className="md:col-span-1 border border-gray-300 rounded-lg px-3 py-2" />
+            <select value={newSurgeon.specialty_id}
+              onChange={(e) => setNewSurgeon({ ...newSurgeon, specialty_id: e.target.value })}
+              className="md:col-span-1 border border-gray-300 rounded-lg px-3 py-2 bg-white">
+              <option value="">Select specialty…</option>
+              {specialties.map(sp => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+            </select>
+            <button onClick={addSurgeon} type="button"
+              className="md:col-span-1 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium">
+              Add Surgeon
+            </button>
+          </div>
+          {surgeons.length === 0 ? (
+            <p className="text-xs text-gray-500">No surgeons yet.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
+              {surgeons.map(su => {
+                const sp = specialties.find(s => s.id === su.specialty_id)
+                return (
+                  <li key={su.id} className="flex items-center justify-between px-3 py-2">
+                    <span className="text-sm text-gray-800">
+                      {su.full_name}
+                      <span className="text-xs text-gray-500 ml-2">({sp ? sp.name : 'unknown specialty'})</span>
+                    </span>
+                    <button onClick={() => removeSurgeon(su.id)} type="button"
+                      className="text-xs text-red-600 hover:underline">Delete</button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       </div>
 
