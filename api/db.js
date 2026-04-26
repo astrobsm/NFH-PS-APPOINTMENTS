@@ -150,6 +150,7 @@ async function initTables() {
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS blood_units INTEGER;
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS anaesthesia_type VARCHAR(100);
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS anaesthetist_name VARCHAR(150);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS folder_number VARCHAR(50);
     EXCEPTION WHEN others THEN NULL;
     END $$;
   `);

@@ -33,6 +33,7 @@ export default function PublicBookSurgery() {
     blood_units: '',
     anaesthesia_type: '',
     anaesthetist_name: '',
+    folder_number: '',
     notes: '',
   })
 
@@ -223,6 +224,13 @@ export default function PublicBookSurgery() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
                 <input name="full_name" value={form.full_name} onChange={change} required
+                  placeholder="Surname First name Other names"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Folder Number</label>
+                <input name="folder_number" value={form.folder_number} onChange={change}
+                  placeholder="e.g. NFH/2026/01234"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>
               <div>
@@ -408,7 +416,9 @@ export default function PublicBookSurgery() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Name of Anaesthetist</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Name of Anaesthetist <span className="text-amber-700 font-semibold">— REMEMBER TO DISCUSS WITH YOUR ANAESTHETIST</span>
+                </label>
                 <input name="anaesthetist_name" value={form.anaesthetist_name} onChange={change}
                   placeholder="e.g. Dr. Adaeze Okafor"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2" />

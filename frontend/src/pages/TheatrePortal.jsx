@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 
 /**
  * Single shareable hub for surgeons & nurses:
- *  - View Public Theatre Registry  (/theatre)
+ *  - View NFH Theatre Registry  (/theatre)
  *  - Book a Surgery (Public)       (/theatre/book)
  *  - Install as a PWA              (Add to Home Screen)
  *  - Share link / QR code
@@ -93,7 +93,7 @@ export default function TheatrePortal() {
             <div className="w-14 h-14 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
               📋
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-1">View Theatre Registry</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-1">View NFH Theatre Registry</h2>
             <p className="text-sm text-slate-600 flex-1">
               See all booked surgeries, theatre allocations, surgeons, ward and day-case status.
             </p>

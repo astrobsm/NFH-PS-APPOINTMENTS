@@ -138,7 +138,7 @@ export default function Home() {
           to="/theatre"
           className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
         >
-          Public Theatre Registry
+          NFH Theatre Registry
         </Link>
         <Link
           to="/theatre/book"

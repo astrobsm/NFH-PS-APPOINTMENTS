@@ -818,6 +818,7 @@ export default function BookSurgery() {
         blood_units: form.needs_blood && form.blood_units ? parseInt(form.blood_units) : null,
         anaesthesia_type: form.anaesthesia_type || null,
         anaesthetist_name: form.anaesthetist_name || null,
+        folder_number: form.folder_number || null,
       }
       const result = await api.bookSurgery(data)
       clearDraft()
@@ -930,7 +931,13 @@ export default function BookSurgery() {
                 </>
               )}
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Folder Number</label>
+                <input type="text" name="folder_number" value={form.folder_number} onChange={handleChange}
+                  placeholder="e.g. NFH/2026/01234"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
                 <input type="number" name="age" value={form.age} onChange={handleChange} required min="0" max="150"

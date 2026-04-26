@@ -128,9 +128,9 @@ export default function PublicTheatreRegistry() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Public Theatre Registry</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">NFH Theatre Registry</h1>
             <p className="text-sm text-slate-600 mt-1">
-              Anonymized list of scheduled surgical cases. No login required.
+              Live registry of scheduled surgical cases. No login required.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -199,6 +199,7 @@ export default function PublicTheatreRegistry() {
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
                   <th className="text-left px-3 py-2 font-semibold">Patient</th>
+                  <th className="text-left px-3 py-2 font-semibold">Folder #</th>
                   <th className="text-left px-3 py-2 font-semibold">Procedure</th>
                   <th className="text-left px-3 py-2 font-semibold">Specialty</th>
                   <th className="text-left px-3 py-2 font-semibold">Surgeon</th>
@@ -213,12 +214,13 @@ export default function PublicTheatreRegistry() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="text-center py-8 text-slate-500">Loading…</td></tr>
+                  <tr><td colSpan={12} className="text-center py-8 text-slate-500">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-8 text-slate-500">No bookings found.</td></tr>
+                  <tr><td colSpan={12} className="text-center py-8 text-slate-500">No bookings found.</td></tr>
                 ) : rows.map(r => (
                   <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-3 py-2 font-medium text-slate-800">{r.patient_first_name || '—'}</td>
+                    <td className="px-3 py-2 font-medium text-slate-800">{r.full_name || r.patient_first_name || '—'}</td>
+                    <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{r.folder_number || '—'}</td>
                     <td className="px-3 py-2 text-slate-700">{r.procedure_name || '—'}</td>
                     <td className="px-3 py-2 text-slate-600">{r.specialty_name || '—'}</td>
                     <td className="px-3 py-2 text-slate-600">{r.surgeon_name || '—'}</td>
@@ -272,7 +274,7 @@ export default function PublicTheatreRegistry() {
         </div>
 
         <p className="text-xs text-slate-500 mt-4 text-center">
-          For privacy, only the patient's first name is shown. Full details are available to authorized hospital staff only.
+          Patient details are visible to anyone with this link. Restrict sharing to authorized hospital staff only.
         </p>
       </div>
 
@@ -282,7 +284,7 @@ export default function PublicTheatreRegistry() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-slate-900 mb-1">Reschedule Surgery</h3>
             <p className="text-sm text-slate-600 mb-4">
-              Patient: <strong>{rescheduleRow.patient_first_name || '—'}</strong> · {rescheduleRow.procedure_name || ''}
+              Patient: <strong>{rescheduleRow.full_name || rescheduleRow.patient_first_name || '—'}</strong> · {rescheduleRow.procedure_name || ''}
               <br/>Current date: <strong>{fmtDate(rescheduleRow.preferred_date)}</strong>
             </p>
             <form onSubmit={submitReschedule} className="space-y-3">

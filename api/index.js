@@ -456,7 +456,7 @@ async function insertSurgeryBooking(body) {
     pre_op_education, post_op_education,
     specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start,
     has_extra_assistant, urgency, equipment_needed, ward, is_daycase,
-    needs_blood, blood_units, anaesthesia_type, anaesthetist_name,
+    needs_blood, blood_units, anaesthesia_type, anaesthetist_name, folder_number,
   } = body;
 
   if (!full_name || age === undefined || !gender || !preferred_date) {
@@ -535,10 +535,10 @@ async function insertSurgeryBooking(body) {
       pre_op_education, post_op_education,
       specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start, slot_end,
       has_extra_assistant, urgency, equipment_needed, ward, is_daycase,
-      needs_blood, blood_units, anaesthesia_type, anaesthetist_name
+      needs_blood, blood_units, anaesthesia_type, anaesthetist_name, folder_number
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13,$14,$15,
                $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,
-               $28,$29,$30,$31)
+               $28,$29,$30,$31,$32)
      RETURNING *`,
     [
       full_name, parseInt(age), gender, phone_number || null,
@@ -566,6 +566,7 @@ async function insertSurgeryBooking(body) {
       blood_units ? parseInt(blood_units) : null,
       anaesthesia_type || null,
       anaesthetist_name || null,
+      folder_number || null,
     ]
   );
   return insertResult.rows[0];
@@ -642,7 +643,7 @@ app.get('/api/public/surgeries', async (req, res) => {
     if (status) { params.push(status); conds.push(`status = $${params.length}`); }
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
     const result = await query(
-      `SELECT s.id, s.full_name, s.preferred_date, s.slot_start, s.slot_end,
+      `SELECT s.id, s.full_name, s.folder_number, s.preferred_date, s.slot_start, s.slot_end,
               s.theatre, s.surgery_class, s.urgency, s.status, s.is_daycase,
               COALESCE(s.procedure_name, s.surgery_type) AS procedure_name,
               sp.name AS specialty_name,
@@ -655,12 +656,13 @@ app.get('/api/public/surgeries', async (req, res) => {
          LIMIT 200`,
       params
     );
-    // Anonymize: first name only
-    const anonymized = result.rows.map(r => {
+    const formatted = result.rows.map(r => {
       const first = (r.full_name || '').split(' ')[0] || '';
       return {
         id: r.id,
+        full_name: r.full_name || '',
         patient_first_name: first,
+        folder_number: r.folder_number || '',
         procedure_name: r.procedure_name,
         preferred_date: formatDateISO(r.preferred_date),
         slot_start: r.slot_start,
@@ -674,7 +676,7 @@ app.get('/api/public/surgeries', async (req, res) => {
         surgeon_name: r.surgeon_name,
       };
     });
-    res.json(anonymized);
+    res.json(formatted);
   } catch (e) {
     console.error('public surgeries list error:', e);
     res.status(500).json({ detail: e.message });
