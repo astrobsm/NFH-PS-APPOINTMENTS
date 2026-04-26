@@ -149,6 +149,30 @@ async function initTables() {
     EXCEPTION WHEN others THEN NULL;
     END $$;
   `);
+
+  // Seed default specialties (idempotent — UNIQUE on name)
+  const DEFAULT_SPECIALTIES = [
+    'Obstetrics & Gynaecology (O/G)',
+    'General Surgery',
+    'Orthopaedics & Trauma',
+    'Paediatric Surgery',
+    'Plastic & Reconstructive Surgery',
+    'Urology',
+    'Neurosurgery',
+    'Cardiothoracic Surgery',
+    'ENT (Otorhinolaryngology)',
+    'Ophthalmology',
+    'Maxillofacial Surgery',
+    'Dental Surgery',
+  ];
+  for (const name of DEFAULT_SPECIALTIES) {
+    try {
+      await query(
+        `INSERT INTO specialties (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`,
+        [name]
+      );
+    } catch (e) { /* ignore */ }
+  }
 }
 
 module.exports = { pool, query, initTables };

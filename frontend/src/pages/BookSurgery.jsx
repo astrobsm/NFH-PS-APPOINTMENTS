@@ -1450,30 +1450,33 @@ export default function BookSurgery() {
             <span className="w-7 h-7 bg-amber-600 text-white rounded-full flex items-center justify-center text-xs font-bold">6</span>
             Date, Theatre & Team
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-4 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Specialty *</label>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Specialty *</label>
                 <select name="specialty_id" value={form.specialty_id} onChange={handleChange} required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none">
-                  <option value="">Select specialty…</option>
+                  className="w-full border-2 border-amber-300 rounded-lg px-3 py-2.5 text-base text-gray-900 bg-white font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none cursor-pointer shadow-sm">
+                  <option value="">— Select specialty —</option>
                   {specialties.map(sp => (
                     <option key={sp.id} value={sp.id}>{sp.name}</option>
                   ))}
                 </select>
                 {specialties.length === 0 && (
-                  <p className="text-xs text-gray-500 mt-1">No specialties yet — add them in Admin Settings.</p>
+                  <p className="text-xs text-red-600 mt-1">No specialties yet — add them in Admin Settings.</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Surgeon *</label>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Surgeon *</label>
                 <select name="surgeon_id" value={form.surgeon_id} onChange={handleChange} required disabled={!form.specialty_id}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none disabled:bg-gray-100">
-                  <option value="">{form.specialty_id ? 'Select surgeon…' : 'Pick a specialty first'}</option>
+                  className="w-full border-2 border-amber-300 rounded-lg px-3 py-2.5 text-base text-gray-900 bg-white font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none cursor-pointer shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed">
+                  <option value="">{form.specialty_id ? '— Select surgeon —' : 'Pick a specialty first'}</option>
                   {surgeons.map(su => (
                     <option key={su.id} value={su.id}>{su.full_name}</option>
                   ))}
                 </select>
+                {form.specialty_id && surgeons.length === 0 && (
+                  <p className="text-xs text-red-600 mt-1">No surgeons listed for this specialty — add in Admin Settings.</p>
+                )}
               </div>
             </div>
 
