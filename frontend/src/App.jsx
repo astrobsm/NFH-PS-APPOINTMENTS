@@ -16,6 +16,7 @@ import WardRoundDashboard from './pages/WardRoundDashboard'
 import QRCodePage from './pages/QRCodePage'
 import PublicTheatreRegistry from './pages/PublicTheatreRegistry'
 import PublicBookSurgery from './pages/PublicBookSurgery'
+import TheatrePortal from './pages/TheatrePortal'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/admin/ward-rounds" element={<WardRoundDashboard />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         {/* Public theatre booking & registry (no login) */}
+        <Route path="/theatre/portal" element={<TheatrePortal />} />
         <Route path="/theatre" element={<PublicTheatreRegistry />} />
         <Route path="/theatre/book" element={<PublicBookSurgery />} />
       </Routes>

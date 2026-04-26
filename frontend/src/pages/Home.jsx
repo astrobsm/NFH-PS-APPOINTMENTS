@@ -129,6 +129,12 @@ export default function Home() {
           Book an Appointment
         </Link>
         <Link
+          to="/theatre/portal"
+          className="inline-block bg-slate-800 hover:bg-slate-900 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
+        >
+          🏥 Theatre Portal (Share/Install)
+        </Link>
+        <Link
           to="/theatre"
           className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-md transition transform hover:scale-105"
         >

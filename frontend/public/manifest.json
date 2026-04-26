@@ -1,14 +1,14 @@
 {
-  "name": "NFH Enugu - PS-Consultation",
-  "short_name": "PS-Consult",
-  "description": "Niger Foundation Hospital, Enugu - Plastic Surgery/Wound Care Consultation Appointment Scheduling",
-  "start_url": "/",
+  "name": "NFH Enugu - Theatre & Consultation Portal",
+  "short_name": "NFH Portal",
+  "description": "Niger Foundation Hospital, Enugu - Theatre booking, registry & consultation appointment scheduling",
+  "start_url": "/theatre/portal",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e40af",
   "orientation": "portrait-primary",
-  "categories": ["medical", "health"],
+  "categories": ["medical", "health", "productivity"],
   "icons": [
     {
       "src": "/favicon.svg",
@@ -21,6 +21,35 @@
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/NFH-LOGO.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Theatre Registry",
+      "short_name": "Registry",
+      "description": "View all booked surgeries",
+      "url": "/theatre",
+      "icons": [{ "src": "/NFH-LOGO.webp", "sizes": "192x192", "type": "image/webp" }]
+    },
+    {
+      "name": "Book a Surgery",
+      "short_name": "Book Surgery",
+      "description": "Submit a new theatre booking",
+      "url": "/theatre/book",
+      "icons": [{ "src": "/NFH-LOGO.webp", "sizes": "192x192", "type": "image/webp" }]
+    },
+    {
+      "name": "Theatre Portal",
+      "short_name": "Portal",
+      "description": "Theatre portal hub",
+      "url": "/theatre/portal",
+      "icons": [{ "src": "/NFH-LOGO.webp", "sizes": "192x192", "type": "image/webp" }]
     }
   ]
 }
