@@ -648,6 +648,68 @@ app.get('/api/public/surgeries', async (req, res) => {
   }
 });
 
+// ── PATCH /api/public/surgeries/:id ── (no-login status / reschedule update)
+// Allows: mark completed, cancel, or reschedule (new preferred_date + optional slot_start)
+app.patch('/api/public/surgeries/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ detail: 'invalid id' });
+    const { action, preferred_date, slot_start, slot_duration_hours } = req.body || {};
+    if (!action) return res.status(400).json({ detail: 'action is required' });
+
+    const allowed = ['complete', 'cancel', 'reschedule'];
+    if (!allowed.includes(action)) {
+      return res.status(400).json({ detail: `action must be one of ${allowed.join(', ')}` });
+    }
+
+    let result;
+    if (action === 'complete') {
+      result = await query(
+        `UPDATE surgeries SET status = 'completed' WHERE id = $1 RETURNING id, status`,
+        [id]
+      );
+    } else if (action === 'cancel') {
+      result = await query(
+        `UPDATE surgeries SET status = 'cancelled' WHERE id = $1 RETURNING id, status`,
+        [id]
+      );
+    } else if (action === 'reschedule') {
+      if (!preferred_date) {
+        return res.status(400).json({ detail: 'preferred_date is required to reschedule' });
+      }
+      // Compute slot_end if slot_start + duration provided
+      let newSlotStart = slot_start || null;
+      let newSlotEnd = null;
+      if (newSlotStart && slot_duration_hours) {
+        const startDt = new Date(newSlotStart);
+        if (!isNaN(startDt.getTime())) {
+          newSlotEnd = new Date(startDt.getTime() + parseInt(slot_duration_hours) * 3600 * 1000)
+            .toISOString();
+        }
+      }
+      result = await query(
+        `UPDATE surgeries
+            SET preferred_date = $1,
+                slot_start = COALESCE($2, slot_start),
+                slot_end   = COALESCE($3, slot_end),
+                slot_duration_hours = COALESCE($4, slot_duration_hours),
+                status = 'pending'
+          WHERE id = $5
+          RETURNING id, status, preferred_date, slot_start, slot_end`,
+        [preferred_date, newSlotStart, newSlotEnd, slot_duration_hours || null, id]
+      );
+    }
+
+    if (!result || result.rows.length === 0) {
+      return res.status(404).json({ detail: 'Surgery not found' });
+    }
+    res.json({ message: `Surgery ${action}d successfully`, ...result.rows[0] });
+  } catch (e) {
+    console.error('public surgery update error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 // ── Specialties (public read, admin write) ──
 app.get('/api/specialties', async (req, res) => {
   try {

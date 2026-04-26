@@ -214,4 +214,7 @@ export const api = {
   },
   bookPublicSurgery: (data) =>
     request('/public/surgeries', { method: 'POST', body: JSON.stringify(data) }),
+  // Public update: complete | cancel | reschedule (no login)
+  updatePublicSurgery: (id, payload) =>
+    request(`/public/surgeries/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
 }

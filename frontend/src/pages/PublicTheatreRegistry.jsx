@@ -33,6 +33,12 @@ export default function PublicTheatreRegistry() {
   const [status, setStatus] = useState('')
   const [showQR, setShowQR] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [busyId, setBusyId] = useState(null)
+  const [rescheduleRow, setRescheduleRow] = useState(null)
+  const [newDate, setNewDate] = useState('')
+  const [newSlotStart, setNewSlotStart] = useState('')
+  const [newSlotHours, setNewSlotHours] = useState('')
+  const [actionMsg, setActionMsg] = useState('')
 
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/theatre` : ''
 
@@ -62,6 +68,58 @@ export default function PublicTheatreRegistry() {
       setTimeout(() => setCopied(false), 2000)
     } catch {
       setCopied(false)
+    }
+  }
+
+  const flash = (msg) => {
+    setActionMsg(msg)
+    setTimeout(() => setActionMsg(''), 3000)
+  }
+
+  const doAction = async (row, action) => {
+    if (action === 'cancel' && !window.confirm(`Cancel surgery for ${row.patient_first_name || 'this patient'}?`)) return
+    if (action === 'complete' && !window.confirm(`Mark surgery for ${row.patient_first_name || 'this patient'} as completed?`)) return
+    setBusyId(row.id)
+    setError('')
+    try {
+      await api.updatePublicSurgery(row.id, { action })
+      flash(action === 'complete' ? 'Marked as completed.' : 'Surgery cancelled.')
+      await load()
+    } catch (e) {
+      setError(e.message || 'Action failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const openReschedule = (row) => {
+    setRescheduleRow(row)
+    setNewDate(row.preferred_date || '')
+    setNewSlotStart('')
+    setNewSlotHours(row.slot_duration_hours ? String(row.slot_duration_hours) : '')
+    setError('')
+  }
+
+  const submitReschedule = async (e) => {
+    e.preventDefault()
+    if (!rescheduleRow || !newDate) { setError('Please pick a new date'); return }
+    setBusyId(rescheduleRow.id)
+    setError('')
+    try {
+      const payload = { action: 'reschedule', preferred_date: newDate }
+      if (newSlotStart) {
+        // Combine date + time into ISO string
+        payload.slot_start = `${newDate}T${newSlotStart}:00`
+      }
+      if (newSlotHours) payload.slot_duration_hours = parseInt(newSlotHours)
+      await api.updatePublicSurgery(rescheduleRow.id, payload)
+      flash('Surgery rescheduled.')
+      setRescheduleRow(null)
+      await load()
+    } catch (e) {
+      setError(e.message || 'Reschedule failed')
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -131,6 +189,9 @@ export default function PublicTheatreRegistry() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-sm">{error}</div>
         )}
+        {actionMsg && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg p-3 mb-4 text-sm">{actionMsg}</div>
+        )}
 
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="overflow-x-auto">
@@ -147,13 +208,14 @@ export default function PublicTheatreRegistry() {
                   <th className="text-left px-3 py-2 font-semibold">Class</th>
                   <th className="text-left px-3 py-2 font-semibold">Type</th>
                   <th className="text-left px-3 py-2 font-semibold">Status</th>
+                  <th className="text-left px-3 py-2 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} className="text-center py-8 text-slate-500">Loading…</td></tr>
+                  <tr><td colSpan={11} className="text-center py-8 text-slate-500">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={10} className="text-center py-8 text-slate-500">No bookings found.</td></tr>
+                  <tr><td colSpan={11} className="text-center py-8 text-slate-500">No bookings found.</td></tr>
                 ) : rows.map(r => (
                   <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium text-slate-800">{r.patient_first_name || '—'}</td>
@@ -176,6 +238,32 @@ export default function PublicTheatreRegistry() {
                         {r.status}
                       </span>
                     </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {r.status === 'completed' || r.status === 'cancelled' ? (
+                        <span className="text-xs text-slate-400 italic">No actions</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            onClick={() => doAction(r, 'complete')}
+                            disabled={busyId === r.id}
+                            title="Mark surgery as completed"
+                            className="px-2 py-1 text-xs font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                          >✓ Complete</button>
+                          <button
+                            onClick={() => openReschedule(r)}
+                            disabled={busyId === r.id}
+                            title="Reschedule — pick a new date"
+                            className="px-2 py-1 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                          >↻ Reschedule</button>
+                          <button
+                            onClick={() => doAction(r, 'cancel')}
+                            disabled={busyId === r.id}
+                            title="Cancel this surgery"
+                            className="px-2 py-1 text-xs font-semibold rounded bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50"
+                          >✕ Cancel</button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -187,6 +275,51 @@ export default function PublicTheatreRegistry() {
           For privacy, only the patient's first name is shown. Full details are available to authorized hospital staff only.
         </p>
       </div>
+
+      {/* Reschedule modal */}
+      {rescheduleRow && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setRescheduleRow(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Reschedule Surgery</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Patient: <strong>{rescheduleRow.patient_first_name || '—'}</strong> · {rescheduleRow.procedure_name || ''}
+              <br/>Current date: <strong>{fmtDate(rescheduleRow.preferred_date)}</strong>
+            </p>
+            <form onSubmit={submitReschedule} className="space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-1">New Date *</label>
+                <input type="date" required value={newDate} onChange={e => setNewDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full border-2 border-blue-300 rounded-lg px-3 py-2 text-slate-900 bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">New Start Time</label>
+                  <input type="time" value={newSlotStart} onChange={e => setNewSlotStart(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Duration (hrs)</label>
+                  <input type="number" min="1" max="12" value={newSlotHours} onChange={e => setNewSlotHours(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">Leaving time/duration blank keeps the existing slot.</p>
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setRescheduleRow(null)}
+                  className="flex-1 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">
+                  Cancel
+                </button>
+                <button type="submit" disabled={busyId === rescheduleRow.id}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold disabled:opacity-50">
+                  {busyId === rescheduleRow.id ? 'Saving…' : 'Reschedule'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
