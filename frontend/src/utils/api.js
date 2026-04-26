@@ -201,6 +201,9 @@ export const api = {
     request(`/surgeons${specialtyId ? `?specialty_id=${specialtyId}` : ''}`),
   createSurgeon: (full_name, specialty_id) =>
     request('/admin/surgeons', { method: 'POST', body: JSON.stringify({ full_name, specialty_id }) }),
+  // Public upsert (no auth) — used by the public booking form when a surgeon name is typed
+  upsertSurgeonPublic: (full_name, specialty_id) =>
+    request('/surgeons', { method: 'POST', body: JSON.stringify({ full_name, specialty_id }) }),
   deleteSurgeon: (id) =>
     request(`/admin/surgeons/${id}`, { method: 'DELETE' }),
 

@@ -728,6 +728,31 @@ app.post('/api/admin/surgeons', requireAdmin, async (req, res) => {
   }
 });
 
+// Public upsert: anyone booking a surgery can register a surgeon by name
+// (idempotent — returns existing row if (full_name, specialty_id) already exists)
+app.post('/api/surgeons', async (req, res) => {
+  try {
+    const { full_name, specialty_id } = req.body;
+    if (!full_name || !specialty_id) {
+      return res.status(400).json({ detail: 'full_name and specialty_id are required' });
+    }
+    const name = String(full_name).trim();
+    if (name.length < 2) {
+      return res.status(400).json({ detail: 'full_name too short' });
+    }
+    const result = await query(
+      `INSERT INTO surgeons (full_name, specialty_id) VALUES ($1, $2)
+         ON CONFLICT (full_name, specialty_id) DO UPDATE SET full_name = EXCLUDED.full_name
+         RETURNING id, full_name, specialty_id`,
+      [name, parseInt(specialty_id)]
+    );
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('public create surgeon error:', e);
+    res.status(500).json({ detail: e.message });
+  }
+});
+
 app.delete('/api/admin/surgeons/:id', requireAdmin, async (req, res) => {
   try {
     const result = await query('DELETE FROM surgeons WHERE id = $1 RETURNING id', [parseInt(req.params.id)]);

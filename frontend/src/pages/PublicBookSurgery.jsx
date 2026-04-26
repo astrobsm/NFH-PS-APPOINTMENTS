@@ -19,6 +19,7 @@ export default function PublicBookSurgery() {
     diagnosis: '',
     specialty_id: '',
     surgeon_id: '',
+    surgeon_name: '',
     theatre: '',
     surgery_class: '',
     slot_duration_hours: '',
@@ -39,7 +40,7 @@ export default function PublicBookSurgery() {
   useEffect(() => {
     if (!form.specialty_id) { setSurgeons([]); return }
     api.getSurgeons(form.specialty_id).then(setSurgeons).catch(() => setSurgeons([]))
-    setForm(f => ({ ...f, surgeon_id: '' }))
+    setForm(f => ({ ...f, surgeon_id: '', surgeon_name: '' }))
   }, [form.specialty_id])
 
   const change = (e) => {
@@ -48,27 +49,62 @@ export default function PublicBookSurgery() {
     setError('')
   }
 
+  // When the user types/selects a surgeon name, try to match an existing surgeon
+  const onSurgeonNameChange = (e) => {
+    const name = e.target.value
+    setError('')
+    const match = surgeons.find(s => s.full_name.toLowerCase() === name.trim().toLowerCase())
+    setForm(f => ({
+      ...f,
+      surgeon_name: name,
+      surgeon_id: match ? String(match.id) : '',
+    }))
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setError('')
 
     const required = ['full_name', 'age', 'gender', 'procedure_name', 'preferred_date',
-      'specialty_id', 'surgeon_id', 'theatre', 'ward']
+      'specialty_id', 'surgeon_name', 'theatre', 'ward']
     for (const k of required) {
       if (!form[k]) { setError(`Please fill in: ${k.replace(/_/g, ' ')}`); return }
     }
 
     setLoading(true)
     try {
+      // Resolve surgeon: if an exact match exists use it; otherwise upsert a new surgeon
+      let surgeonId = form.surgeon_id
+      const typedName = form.surgeon_name.trim()
+      const match = surgeons.find(s => s.full_name.toLowerCase() === typedName.toLowerCase())
+      if (match) {
+        surgeonId = String(match.id)
+      } else if (typedName.length >= 2) {
+        try {
+          const created = await api.upsertSurgeonPublic(typedName, parseInt(form.specialty_id))
+          surgeonId = String(created.id)
+          // Refresh the local list so the new surgeon appears in suggestions next time
+          setSurgeons(prev => {
+            if (prev.some(s => s.id === created.id)) return prev
+            return [...prev, created].sort((a, b) => a.full_name.localeCompare(b.full_name))
+          })
+        } catch (err) {
+          setError(err.message || 'Could not save surgeon name')
+          setLoading(false)
+          return
+        }
+      }
+
       const payload = {
         ...form,
         age: parseInt(form.age),
         slot_duration_hours: form.slot_duration_hours ? parseInt(form.slot_duration_hours) : null,
         specialty_id: form.specialty_id || null,
-        surgeon_id: form.surgeon_id || null,
+        surgeon_id: surgeonId || null,
         slot_start: form.slot_start || null,
         surgery_type: form.procedure_name,
       }
+      delete payload.surgeon_name
       const result = await api.bookPublicSurgery(payload)
       setSuccess(result)
     } catch (err) {
@@ -177,13 +213,26 @@ export default function PublicBookSurgery() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-800 mb-1">Surgeon *</label>
-                  <select name="surgeon_id" value={form.surgeon_id} onChange={change} required disabled={!form.specialty_id}
-                    className="w-full border-2 border-amber-300 rounded-lg px-3 py-2.5 text-base text-slate-900 bg-white font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none cursor-pointer shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed">
-                    <option value="">{form.specialty_id ? '— Select surgeon —' : 'Pick a specialty first'}</option>
-                    {surgeons.map(su => <option key={su.id} value={su.id}>{su.full_name}</option>)}
-                  </select>
-                  {form.specialty_id && surgeons.length === 0 && (
-                    <p className="text-xs text-red-600 mt-1">No surgeons listed for this specialty.</p>
+                  <input
+                    name="surgeon_name"
+                    value={form.surgeon_name}
+                    onChange={onSurgeonNameChange}
+                    required
+                    disabled={!form.specialty_id}
+                    list="surgeon-suggestions"
+                    autoComplete="off"
+                    placeholder={form.specialty_id ? 'Type or pick surgeon’s name…' : 'Pick a specialty first'}
+                    className="w-full border-2 border-amber-300 rounded-lg px-3 py-2.5 text-base text-slate-900 bg-white font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  />
+                  <datalist id="surgeon-suggestions">
+                    {surgeons.map(su => <option key={su.id} value={su.full_name} />)}
+                  </datalist>
+                  {form.specialty_id && (
+                    form.surgeon_id
+                      ? <p className="text-xs text-emerald-700 mt-1">✓ Existing surgeon selected.</p>
+                      : form.surgeon_name.trim().length >= 2
+                        ? <p className="text-xs text-blue-700 mt-1">New surgeon — will be saved on submit and reusable next time.</p>
+                        : <p className="text-xs text-slate-500 mt-1">Start typing — pick from suggestions or enter a new name.</p>
                   )}
                 </div>
               </div>
