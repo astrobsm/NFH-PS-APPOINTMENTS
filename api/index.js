@@ -456,6 +456,7 @@ async function insertSurgeryBooking(body) {
     pre_op_education, post_op_education,
     specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start,
     has_extra_assistant, urgency, equipment_needed, ward, is_daycase,
+    needs_blood, blood_units, anaesthesia_type, anaesthetist_name,
   } = body;
 
   if (!full_name || age === undefined || !gender || !preferred_date) {
@@ -501,15 +502,43 @@ async function insertSurgeryBooking(body) {
     }
   }
 
+  // Small Theatre availability rule: only bookable if (a) the Large Theatre is
+  // booked at the same time and (b) the surgeon is bringing an external surgical
+  // assistant. Thursdays 09:00–16:00 the Small Theatre is reserved for endoscopies
+  // — bookings in that window are accepted but flagged 'pending' for scrub-nurse confirmation.
+  if (theatre === 'SMALL' && slotStartISO && slotEndISO) {
+    if (!(has_extra_assistant === true || has_extra_assistant === 'true')) {
+      const err = new Error('Small Theatre requires the surgeon to bring an external surgical assistant');
+      err.status = 400; throw err;
+    }
+    const overlap = await query(
+      `SELECT id FROM surgeries
+         WHERE theatre = 'LARGE'
+           AND status IN ('pending','confirmed')
+           AND slot_start IS NOT NULL
+           AND slot_end   IS NOT NULL
+           AND slot_start < $2
+           AND slot_end   > $1
+         LIMIT 1`,
+      [slotStartISO, slotEndISO]
+    );
+    if (overlap.rows.length === 0) {
+      const err = new Error('Small Theatre is only available when the Large Theatre is booked at the same time');
+      err.status = 400; throw err;
+    }
+  }
+
   const insertResult = await query(
     `INSERT INTO surgeries (
       full_name, age, gender, phone_number, surgery_type, diagnosis, preferred_date, notes, status,
       procedure_name, pre_op_planning, investigations, requirements, readiness_checklist,
       pre_op_education, post_op_education,
       specialty_id, surgeon_id, theatre, surgery_class, slot_duration_hours, slot_start, slot_end,
-      has_extra_assistant, urgency, equipment_needed, ward, is_daycase
+      has_extra_assistant, urgency, equipment_needed, ward, is_daycase,
+      needs_blood, blood_units, anaesthesia_type, anaesthetist_name
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13,$14,$15,
-               $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+               $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,
+               $28,$29,$30,$31)
      RETURNING *`,
     [
       full_name, parseInt(age), gender, phone_number || null,
@@ -533,6 +562,10 @@ async function insertSurgeryBooking(body) {
       equipment_needed || null,
       ward || null,
       is_daycase === true || is_daycase === 'true',
+      needs_blood === true || needs_blood === 'true',
+      blood_units ? parseInt(blood_units) : null,
+      anaesthesia_type || null,
+      anaesthetist_name || null,
     ]
   );
   return insertResult.rows[0];

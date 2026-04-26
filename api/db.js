@@ -146,6 +146,10 @@ async function initTables() {
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS equipment_needed TEXT;
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS ward VARCHAR(100);
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS is_daycase BOOLEAN DEFAULT FALSE;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS needs_blood BOOLEAN DEFAULT FALSE;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS blood_units INTEGER;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS anaesthesia_type VARCHAR(100);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS anaesthetist_name VARCHAR(150);
     EXCEPTION WHEN others THEN NULL;
     END $$;
   `);

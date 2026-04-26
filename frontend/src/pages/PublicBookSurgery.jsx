@@ -14,7 +14,6 @@ export default function PublicBookSurgery() {
     full_name: '',
     age: '',
     gender: '',
-    phone_number: '',
     procedure_name: '',
     diagnosis: '',
     specialty_id: '',
@@ -30,8 +29,21 @@ export default function PublicBookSurgery() {
     equipment_needed: '',
     ward: '',
     is_daycase: false,
+    needs_blood: false,
+    blood_units: '',
+    anaesthesia_type: '',
+    anaesthetist_name: '',
     notes: '',
   })
+
+  // Existing bookings for the chosen surgery date — used to validate Small Theatre
+  // (only available when the Large Theatre is booked at the same time).
+  const [dayBookings, setDayBookings] = useState([])
+  useEffect(() => {
+    if (!form.preferred_date) { setDayBookings([]); return }
+    api.getPublicSurgeries({ from: form.preferred_date, to: form.preferred_date })
+      .then(setDayBookings).catch(() => setDayBookings([]))
+  }, [form.preferred_date])
 
   useEffect(() => {
     api.getSpecialties().then(setSpecialties).catch(() => setSpecialties([]))
@@ -66,9 +78,49 @@ export default function PublicBookSurgery() {
     setError('')
 
     const required = ['full_name', 'age', 'gender', 'procedure_name', 'preferred_date',
-      'specialty_id', 'surgeon_name', 'theatre', 'ward']
+      'specialty_id', 'surgeon_name', 'theatre', 'ward', 'anaesthesia_type']
     for (const k of required) {
       if (!form[k]) { setError(`Please fill in: ${k.replace(/_/g, ' ')}`); return }
+    }
+    if (form.needs_blood && (!form.blood_units || parseInt(form.blood_units) < 1)) {
+      setError('Please enter the number of blood units required'); return
+    }
+
+    // Combine time-only slot_start with the surgery date into an ISO datetime
+    let slotIso = null
+    if (form.slot_start) {
+      const dt = new Date(`${form.preferred_date}T${form.slot_start}:00`)
+      if (!isNaN(dt.getTime())) slotIso = dt.toISOString()
+    }
+
+    // Small Theatre availability rules
+    if (form.theatre === 'SMALL') {
+      if (!form.has_extra_assistant) {
+        setError('Small Theatre is only available when the surgeon is bringing an external surgical assistant.')
+        return
+      }
+      if (slotIso && form.slot_duration_hours) {
+        const startMs = new Date(slotIso).getTime()
+        const endMs = startMs + parseInt(form.slot_duration_hours) * 3600 * 1000
+        const overlapsLarge = dayBookings.some(b => {
+          if (b.theatre !== 'LARGE' || !b.slot_start || !b.slot_end) return false
+          const bs = new Date(b.slot_start).getTime()
+          const be = new Date(b.slot_end).getTime()
+          return bs < endMs && be > startMs
+        })
+        if (!overlapsLarge) {
+          setError('Small Theatre is only available when the Large Theatre is booked at the same time.')
+          return
+        }
+        // Thursday 09:00–16:00 — Small Theatre is reserved for endoscopies
+        const day = new Date(`${form.preferred_date}T00:00:00`).getDay() // 0=Sun, 4=Thu
+        const [hh] = form.slot_start.split(':').map(Number)
+        const inEndoWindow = day === 4 && hh >= 9 && hh < 16
+        if (inEndoWindow) {
+          const ok = window.confirm('On Thursdays 09:00–16:00 the Small Theatre is normally used for endoscopies. Booking it in this window requires confirmation from the scrub nurses. Submit anyway?')
+          if (!ok) return
+        }
+      }
     }
 
     setLoading(true)
@@ -101,7 +153,8 @@ export default function PublicBookSurgery() {
         slot_duration_hours: form.slot_duration_hours ? parseInt(form.slot_duration_hours) : null,
         specialty_id: form.specialty_id || null,
         surgeon_id: surgeonId || null,
-        slot_start: form.slot_start || null,
+        slot_start: slotIso,
+        blood_units: form.needs_blood && form.blood_units ? parseInt(form.blood_units) : null,
         surgery_type: form.procedure_name,
       }
       delete payload.surgeon_name
@@ -137,7 +190,7 @@ export default function PublicBookSurgery() {
             <Link to="/theatre" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium">
               View Public Registry
             </Link>
-            <button onClick={() => { setSuccess(null); setForm(f => ({ ...f, full_name: '', phone_number: '', procedure_name: '', notes: '' })) }}
+            <button onClick={() => { setSuccess(null); setForm(f => ({ ...f, full_name: '', procedure_name: '', notes: '' })) }}
               className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">
               Book Another
             </button>
@@ -170,11 +223,6 @@ export default function PublicBookSurgery() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
                 <input name="full_name" value={form.full_name} onChange={change} required
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                <input name="phone_number" value={form.phone_number} onChange={change} placeholder="0xxxxxxxxxx"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>
               <div>
@@ -297,11 +345,11 @@ export default function PublicBookSurgery() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Slot Start</label>
-                  <input type="datetime-local" name="slot_start" value={form.slot_start} onChange={change}
+                  <input type="time" name="slot_start" value={form.slot_start} onChange={change}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Preferred Date *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Surgery Date *</label>
                   <input type="date" name="preferred_date" min={today} value={form.preferred_date} onChange={change} required
                     className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 </div>
@@ -336,12 +384,54 @@ export default function PublicBookSurgery() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="has_extra_assistant" checked={!!form.has_extra_assistant} onChange={change}
                       className="w-5 h-5 text-amber-600 border-slate-300 rounded" />
-                    <span className="text-sm font-medium text-slate-700">Extra assistant</span>
+                    <span className="text-sm font-medium text-slate-700">I have external surgical assistant</span>
                   </label>
                 </div>
               </div>
+              {form.theatre === 'SMALL' && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3">
+                  <strong>Note:</strong> Small Theatre is only available when the Large Theatre is booked at the same time and the surgeon is bringing an external surgical assistant.
+                  On Thursdays 09:00–16:00 it is reserved for endoscopies — bookings in that window require confirmation from the scrub nurses.
+                </div>
+              )}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Equipment Needed</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Anaesthesia Type *</label>
+                <select name="anaesthesia_type" value={form.anaesthesia_type} onChange={change} required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                  <option value="">Select…</option>
+                  <option value="General Anaesthesia">General Anaesthesia</option>
+                  <option value="Regional – Spinal">Regional – Spinal</option>
+                  <option value="Regional – Epidural">Regional – Epidural</option>
+                  <option value="Local Anaesthesia">Local Anaesthesia</option>
+                  <option value="Sedation">Sedation</option>
+                  <option value="Combined">Combined</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name of Anaesthetist</label>
+                <input name="anaesthetist_name" value={form.anaesthetist_name} onChange={change}
+                  placeholder="e.g. Dr. Adaeze Okafor"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="needs_blood" checked={!!form.needs_blood} onChange={change}
+                      className="w-5 h-5 text-red-600 border-slate-300 rounded" />
+                    <span className="text-sm font-medium text-slate-700">Need for blood</span>
+                  </label>
+                </div>
+                {form.needs_blood && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Number of units *</label>
+                    <input type="number" min="1" name="blood_units" value={form.blood_units} onChange={change}
+                      placeholder="e.g. 2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Special Equipments and Consumables Needed</label>
                 <input name="equipment_needed" value={form.equipment_needed} onChange={change}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2" />
               </div>

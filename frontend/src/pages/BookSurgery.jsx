@@ -688,6 +688,47 @@ export default function BookSurgery() {
     try {
       const phone = form.phone_number ? '+234' + form.phone_number.replace(/^0+/, '') : ''
 
+      // Combine time-only slot_start with the surgery date
+      let slotIso = null
+      if (form.slot_start && form.preferred_date) {
+        const dt = new Date(`${form.preferred_date}T${form.slot_start}:00`)
+        if (!isNaN(dt.getTime())) slotIso = dt.toISOString()
+      }
+
+      // Small Theatre availability rules
+      if (form.theatre === 'SMALL') {
+        if (!form.has_extra_assistant) {
+          setLoading(false)
+          setError('Small Theatre is only available when the surgeon is bringing an external surgical assistant.')
+          return
+        }
+        if (slotIso && form.slot_duration_hours) {
+          const startMs = new Date(slotIso).getTime()
+          const endMs = startMs + parseInt(form.slot_duration_hours) * 3600 * 1000
+          let dayBookings = []
+          try {
+            dayBookings = await api.getPublicSurgeries({ from: form.preferred_date, to: form.preferred_date })
+          } catch { /* network issue — backend will still validate */ }
+          const overlapsLarge = dayBookings.some(b => {
+            if (b.theatre !== 'LARGE' || !b.slot_start || !b.slot_end) return false
+            const bs = new Date(b.slot_start).getTime()
+            const be = new Date(b.slot_end).getTime()
+            return bs < endMs && be > startMs
+          })
+          if (!overlapsLarge) {
+            setLoading(false)
+            setError('Small Theatre is only available when the Large Theatre is booked at the same time.')
+            return
+          }
+          const day = new Date(`${form.preferred_date}T00:00:00`).getDay()
+          const [hh] = form.slot_start.split(':').map(Number)
+          if (day === 4 && hh >= 9 && hh < 16) {
+            const ok = window.confirm('On Thursdays 09:00–16:00 the Small Theatre is normally used for endoscopies. Booking it in this window requires confirmation from the scrub nurses. Submit anyway?')
+            if (!ok) { setLoading(false); return }
+          }
+        }
+      }
+
       const capScore = calcCaprini()
       const mustScore = calcMust()
       const rcriScore = calcRcri()
@@ -767,12 +808,16 @@ export default function BookSurgery() {
         theatre: form.theatre || null,
         surgery_class: form.surgery_class || null,
         slot_duration_hours: form.slot_duration_hours ? parseInt(form.slot_duration_hours) : null,
-        slot_start: form.slot_start || null,
+        slot_start: slotIso,
         has_extra_assistant: !!form.has_extra_assistant,
         urgency: form.urgency || 'ELECTIVE',
         equipment_needed: form.equipment_needed || null,
         ward: form.ward || null,
         is_daycase: !!form.is_daycase,
+        needs_blood: !!form.needs_blood,
+        blood_units: form.needs_blood && form.blood_units ? parseInt(form.blood_units) : null,
+        anaesthesia_type: form.anaesthesia_type || null,
+        anaesthetist_name: form.anaesthetist_name || null,
       }
       const result = await api.bookSurgery(data)
       clearDraft()
@@ -900,18 +945,6 @@ export default function BookSurgery() {
                   <option value="Female">Female</option>
                 </select>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (WhatsApp)</label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-600 text-sm font-medium select-none">+234</span>
-                <input type="tel" name="phone_number" value={form.phone_number}
-                  onChange={(e) => { setForm(f => ({ ...f, phone_number: e.target.value.replace(/[^0-9]/g, '') })) }}
-                  maxLength={11}
-                  className="w-full border border-gray-300 rounded-r-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. 08012345678" />
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Enter your number without the country code</p>
             </div>
           </div>
         </div>
