@@ -445,6 +445,14 @@ export default function BookSurgery() {
     return () => clearTimeout(timer)
   }, [patientQuery])
 
+  // Existing bookings for the chosen surgery date — used to prevent slot collisions.
+  const [dayBookings, setDayBookings] = useState([])
+  useEffect(() => {
+    if (!form.preferred_date) { setDayBookings([]); return }
+    api.getPublicSurgeries({ from: form.preferred_date, to: form.preferred_date })
+      .then(setDayBookings).catch(() => setDayBookings([]))
+  }, [form.preferred_date])
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -726,6 +734,28 @@ export default function BookSurgery() {
             const ok = window.confirm('On Thursdays 09:00–16:00 the Small Theatre is normally used for endoscopies. Booking it in this window requires confirmation from the scrub nurses. Submit anyway?')
             if (!ok) { setLoading(false); return }
           }
+        }
+      }
+
+      // Per-theatre slot conflict (any theatre): once a slot is taken on a given
+      // date, nobody else can book an overlapping slot in the same theatre.
+      if (slotIso && form.slot_duration_hours && form.theatre) {
+        const startMs = new Date(slotIso).getTime()
+        const endMs = startMs + parseInt(form.slot_duration_hours) * 3600 * 1000
+        const conflict = dayBookings.find(b => {
+          if (b.theatre !== form.theatre || !b.slot_start || !b.slot_end) return false
+          const st = String(b.status || '').toLowerCase()
+          if (st && !['pending', 'confirmed'].includes(st)) return false
+          const bs = new Date(b.slot_start).getTime()
+          const be = new Date(b.slot_end).getTime()
+          return bs < endMs && be > startMs
+        })
+        if (conflict) {
+          const cs = new Date(conflict.slot_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          const ce = new Date(conflict.slot_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          setLoading(false)
+          setError(`That time is already taken in the ${form.theatre} Theatre on ${form.preferred_date} (${cs}–${ce}). Please pick a different start time or duration.`)
+          return
         }
       }
 
@@ -1573,6 +1603,32 @@ export default function BookSurgery() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
               </div>
             </div>
+
+            {form.preferred_date && form.theatre && (() => {
+              const taken = dayBookings
+                .filter(b => b.theatre === form.theatre && b.slot_start && b.slot_end)
+                .filter(b => { const st = String(b.status || '').toLowerCase(); return !st || ['pending', 'confirmed'].includes(st) })
+                .sort((a, b) => new Date(a.slot_start) - new Date(b.slot_start))
+              if (taken.length === 0) {
+                return (
+                  <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    ✓ No slots booked yet in the {form.theatre} Theatre on {form.preferred_date}. Pick any time.
+                  </p>
+                )
+              }
+              return (
+                <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <div className="font-semibold text-amber-800 mb-1">Already booked in {form.theatre} Theatre on {form.preferred_date} (avoid these times):</div>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {taken.map(b => {
+                      const cs = new Date(b.slot_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      const ce = new Date(b.slot_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      return <li key={b.id} className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">{cs}–{ce}</li>
+                    })}
+                  </ul>
+                </div>
+              )
+            })()}
 
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-2">Patient Type *</label>
