@@ -306,6 +306,25 @@ export default function PublicBookSurgery() {
                     className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-800 mb-2">Patient Type *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition font-medium text-sm ${!form.is_daycase ? 'border-blue-500 bg-blue-50 text-blue-800 ring-2 ring-blue-200' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    <input type="radio" name="is_daycase" checked={!form.is_daycase}
+                      onChange={() => setForm(f => ({ ...f, is_daycase: false }))}
+                      className="sr-only" />
+                    🏥 In-patient
+                    <span className="text-xs text-slate-500 hidden sm:inline">(admitted)</span>
+                  </label>
+                  <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition font-medium text-sm ${form.is_daycase ? 'border-purple-500 bg-purple-50 text-purple-800 ring-2 ring-purple-200' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    <input type="radio" name="is_daycase" checked={!!form.is_daycase}
+                      onChange={() => setForm(f => ({ ...f, is_daycase: true }))}
+                      className="sr-only" />
+                    ☀️ Day-case
+                    <span className="text-xs text-slate-500 hidden sm:inline">(same-day)</span>
+                  </label>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Ward / Unit *</label>
@@ -313,12 +332,7 @@ export default function PublicBookSurgery() {
                     placeholder="e.g. Surgical Ward A, Day-Case Unit"
                     className="w-full border border-slate-300 rounded-lg px-3 py-2" />
                 </div>
-                <div className="flex items-center gap-6 pt-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="is_daycase" checked={!!form.is_daycase} onChange={change}
-                      className="w-5 h-5 text-amber-600 border-slate-300 rounded" />
-                    <span className="text-sm font-medium text-slate-700">Day-case</span>
-                  </label>
+                <div className="flex items-center pt-6">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="has_extra_assistant" checked={!!form.has_extra_assistant} onChange={change}
                       className="w-5 h-5 text-amber-600 border-slate-300 rounded" />

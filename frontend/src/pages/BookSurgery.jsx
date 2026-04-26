@@ -1534,6 +1534,26 @@ export default function BookSurgery() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Patient Type *</label>
+              <div className="grid grid-cols-2 gap-2 max-w-md">
+                <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition font-medium text-sm ${!form.is_daycase ? 'border-blue-500 bg-blue-50 text-blue-800 ring-2 ring-blue-200' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  <input type="radio" name="is_daycase" checked={!form.is_daycase}
+                    onChange={() => setForm(f => ({ ...f, is_daycase: false }))}
+                    className="sr-only" />
+                  🏥 In-patient
+                  <span className="text-xs text-gray-500 hidden sm:inline">(admitted)</span>
+                </label>
+                <label className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 cursor-pointer transition font-medium text-sm ${form.is_daycase ? 'border-purple-500 bg-purple-50 text-purple-800 ring-2 ring-purple-200' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  <input type="radio" name="is_daycase" checked={!!form.is_daycase}
+                    onChange={() => setForm(f => ({ ...f, is_daycase: true }))}
+                    className="sr-only" />
+                  ☀️ Day-case
+                  <span className="text-xs text-gray-500 hidden sm:inline">(same-day discharge)</span>
+                </label>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Ward / Unit *</label>
@@ -1541,12 +1561,7 @@ export default function BookSurgery() {
                   placeholder="e.g. Surgical Ward A, Day-Case Unit"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white focus:ring-2 focus:ring-amber-500 outline-none" />
               </div>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" name="is_daycase" checked={!!form.is_daycase} onChange={handleChange}
-                    className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
-                  <span className="text-sm font-medium text-gray-700">Day-case surgery</span>
-                </label>
+              <div className="flex items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" name="has_extra_assistant" checked={!!form.has_extra_assistant} onChange={handleChange}
                     className="w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500" />
