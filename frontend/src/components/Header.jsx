@@ -11,7 +11,7 @@ export default function Header() {
     <header className="bg-blue-800 text-white shadow-lg">
       <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/NFH-LOGO.webp" alt="NFH Logo" className="w-10 h-10 rounded-full bg-white object-contain" />
+          <img src="/nfh-logo-dc.png" alt="NFH Logo" className="w-10 h-10 rounded-full bg-white object-contain" />
           <div className="leading-tight">
             <span className="text-lg font-bold tracking-tight block">PS-Consultation</span>
             <span className="text-[10px] text-blue-200 block">Niger Foundation Hospital, Enugu</span>

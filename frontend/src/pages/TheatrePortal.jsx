@@ -73,7 +73,7 @@ export default function TheatrePortal() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4 overflow-hidden">
-            <img src="/NFH-LOGO.webp" alt="NFH Logo" className="w-16 h-16 object-contain" />
+            <img src="/nfh-logo-dc.png" alt="NFH Logo" className="w-16 h-16 object-contain" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
             NFH Theatre Portal

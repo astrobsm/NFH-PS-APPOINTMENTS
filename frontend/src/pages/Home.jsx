@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-12 relative z-10">
       <div className="text-center mb-12">
-        <img src="/NFH-LOGO.webp" alt="Niger Foundation Hospital Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
+        <img src="/nfh-logo-dc.png" alt="Niger Foundation Hospital Logo" className="w-24 h-24 mx-auto mb-4 object-contain" />
         <h1 className="text-3xl font-bold text-blue-800 mb-1">
           Niger Foundation Hospital, Enugu
         </h1>

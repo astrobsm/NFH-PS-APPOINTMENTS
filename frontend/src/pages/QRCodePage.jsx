@@ -100,7 +100,7 @@ export default function QRCodePage() {
         <div className="container" style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <div className="bg-white rounded-xl shadow-lg p-8">
             {/* Header */}
-            <img src="/NFH-LOGO.webp" alt="NFH Logo" className="w-20 h-20 mx-auto mb-3 rounded-full object-contain" style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px' }} />
+            <img src="/nfh-logo-dc.png" alt="NFH Logo" className="w-20 h-20 mx-auto mb-3 rounded-full object-contain" style={{ width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px' }} />
             <h1 style={{ color: '#1e40af', fontSize: 22, marginBottom: 4 }} className="text-2xl font-bold text-blue-800 mb-1">
               Niger Foundation Hospital, Enugu
             </h1>
