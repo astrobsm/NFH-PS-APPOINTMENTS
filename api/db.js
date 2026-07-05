@@ -61,20 +61,6 @@ async function initTables() {
     END $$;
   `);
 
-  // Add new surgery booking columns for pre-operative planning
-  await query(`
-    DO $$ BEGIN
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS pre_op_planning JSONB;
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS investigations JSONB;
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS procedure_name VARCHAR(200);
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS requirements JSONB;
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS readiness_checklist JSONB;
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS pre_op_education TEXT;
-      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS post_op_education TEXT;
-    EXCEPTION WHEN others THEN NULL;
-    END $$;
-  `);
-
   await query(`
     CREATE TABLE IF NOT EXISTS surgeries (
       id SERIAL PRIMARY KEY,
@@ -134,6 +120,13 @@ async function initTables() {
   // Extend surgeries with theatre-booking fields (idempotent)
   await query(`
     DO $$ BEGIN
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS pre_op_planning JSONB;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS investigations JSONB;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS procedure_name VARCHAR(200);
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS requirements JSONB;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS readiness_checklist JSONB;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS pre_op_education TEXT;
+      ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS post_op_education TEXT;
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS specialty_id INTEGER REFERENCES specialties(id) ON DELETE SET NULL;
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS surgeon_id INTEGER REFERENCES surgeons(id) ON DELETE SET NULL;
       ALTER TABLE surgeries ADD COLUMN IF NOT EXISTS theatre VARCHAR(20);

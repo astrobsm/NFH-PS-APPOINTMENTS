@@ -26,9 +26,21 @@ app.use(async (req, res, next) => {
 app.get('/api/health', async (req, res) => {
   let dbStatus = 'unknown';
   let dbError = null;
+  let tables = null;
   try {
     await query('SELECT 1');
     dbStatus = 'connected';
+    // Ensure schema is applied, then report which expected tables exist
+    try { await initTables(); } catch (e) { /* reported below */ }
+    const expected = ['settings', 'appointments', 'surgeries', 'ward_rounds', 'specialties', 'surgeons'];
+    const result = await query(
+      `SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = ANY($1)`,
+      [expected]
+    );
+    const present = result.rows.map(r => r.table_name);
+    tables = {};
+    for (const t of expected) tables[t] = present.includes(t);
   } catch (e) {
     dbStatus = 'error';
     dbError = e.message;
@@ -39,6 +51,7 @@ app.get('/api/health', async (req, res) => {
     runtime: 'node',
     database: dbStatus,
     db_error: dbError,
+    tables,
   });
 });
 
